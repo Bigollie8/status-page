@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Status | basedsecurity.net</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F7E2;</text></svg>">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-tertiary: #1a1a1a;
+      --text-primary: #ffffff;
+      --text-secondary: #888888;
+      --text-muted: #555555;
+      --border-color: #222222;
+      --green: #00d26a;
+      --green-dim: rgba(0, 210, 106, 0.1);
+      --yellow: #ffc107;
+      --yellow-dim: rgba(255, 193, 7, 0.1);
+      --red: #ff4757;
+      --red-dim: rgba(255, 71, 87, 0.1);
+      --blue: #3b82f6;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: var(--green);
+    }
+
+    header p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .overall-status {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.operational { background: var(--green); }
+    .status-dot.degraded { background: var(--yellow); animation: none; }
+    .status-dot.major_outage { background: var(--red); animation: none; }
+    .status-dot.loading { background: var(--text-muted); animation: blink 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 210, 106, 0.4); }
+      50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(0, 210, 106, 0); }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .last-updated {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+
+    .category {
+      margin-bottom: 24px;
+    }
+
+    .category-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      padding-left: 4px;
+    }
+
+    .services-list {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .service-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      transition: background 0.2s;
+    }
+
+    .service-item:last-child {
+      border-bottom: none;
+    }
+
+    .service-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .service-info {
+      flex: 1;
+    }
+
+    .service-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .service-name a {
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .service-name a:hover {
+      color: var(--blue);
+    }
+
+    .external-icon {
+      width: 12px;
+      height: 12px;
+      opacity: 0.5;
+    }
+
+    .service-description {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .service-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .response-time {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: 'SF Mono', Monaco, monospace;
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .status-badge.operational {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .status-badge.degraded {
+      background: var(--yellow-dim);
+      color: var(--yellow);
+    }
+
+    .status-badge.major_outage {
+      background: var(--red-dim);
+      color: var(--red);
+    }
+
+    .status-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .incident-history {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 32px;
+    }
+
+    .incident-header {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .no-incidents {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--text-primary);
+    }
+
+    .refresh-btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .refresh-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--text-muted);
+    }
+
+    .refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .refresh-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .refresh-btn.loading svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      background: var(--red-dim);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      color: var(--red);
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .service-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .service-status {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">based<span>security</span>.net</div>
+      <p>Service Status Dashboard</p>
+    </header>
+
+    <div class="overall-status">
+      <div class="status-indicator">
+        <div class="status-dot loading" id="overall-dot"></div>
+        <span id="overall-text">Checking systems...</span>
+      </div>
+      <div class="last-updated">
+        <span id="last-updated">Fetching status...</span>
+        <button class="refresh-btn" id="refresh-btn" onclick="fetchStatus()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2v6h-6"></path>
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+            <path d="M3 22v-6h6"></path>
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <div id="error-container"></div>
+
+    <div id="services-container">
+      <!-- Services will be rendered here -->
+    </div>
+
+    <div class="incident-history">
+      <div class="incident-header">Recent Incidents</div>
+      <div class="no-incidents">No incidents reported in the last 90 days.</div>
+    </div>
+
+    <footer>
+      <p>Powered by <a href="https://portfolio.basedsecurity.net" target="_blank">basedsecurity.net</a></p>
+    </footer>
+  </div>
+
+  <script>
+    const categories = {
+      application: 'Applications',
+      microservice: 'Microservices',
+      infrastructure: 'Infrastructure'
+    };
+
+    const statusLabels = {
+      operational: 'Operational',
+      degraded: 'Degraded',
+      major_outage: 'Major Outage'
+    };
+
+    const overallLabels = {
+      operational: 'All Systems Operational',
+      degraded: 'Partial System Outage',
+      major_outage: 'Major System Outage'
+    };
+
+    function formatResponseTime(ms) {
+      if (ms === null || ms === undefined) return '-';
+      if (ms < 1000) return `${ms}ms`;
+      return `${(ms / 1000).toFixed(2)}s`;
+    }
+
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    function renderServices(services) {
+      const container = document.getElementById('services-container');
+      const grouped = {};
+
+      // Group by category
+      services.forEach(service => {
+        const cat = service.category || 'other';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(service);
+      });
+
+      let html = '';
+
+      // Render in order: application, microservice, infrastructure
+      ['application', 'microservice', 'infrastructure'].forEach(category => {
+        if (!grouped[category]) return;
+
+        html += `
+          <div class="category">
+            <div class="category-header">${categories[category] || category}</div>
+            <div class="services-list">
+              ${grouped[category].map(service => `
+                <div class="service-item">
+                  <div class="service-info">
+                    <div class="service-name">
+                      ${service.publicUrl
+                        ? `<a href="${service.publicUrl}" target="_blank">${service.name}</a>
+                           <svg class="external-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                             <polyline points="15 3 21 3 21 9"></polyline>
+                             <line x1="10" y1="14" x2="21" y2="3"></line>
+                           </svg>`
+                        : service.name
+                      }
+                    </div>
+                    <div class="service-description">${service.description}</div>
+                  </div>
+                  <div class="service-status">
+                    <div class="response-time">${formatResponseTime(service.responseTime)}</div>
+                    <div class="status-badge ${service.status}">
+                      <span class="dot"></span>
+                      ${statusLabels[service.status] || service.status}
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function updateOverallStatus(status) {
+      const dot = document.getElementById('overall-dot');
+      const text = document.getElementById('overall-text');
+
+      dot.className = `status-dot ${status}`;
+      text.textContent = overallLabels[status] || status;
+    }
+
+    function showError(message) {
+      const container = document.getElementById('error-container');
+      container.innerHTML = `<div class="error-message">${message}</div>`;
+    }
+
+    function clearError() {
+      document.getElementById('error-container').innerHTML = '';
+    }
+
+    async function fetchStatus() {
+      const btn = document.getElementById('refresh-btn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+
+      try {
+        const response = await fetch('/api/status');
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        clearError();
+        updateOverallStatus(data.overallStatus);
+        renderServices(data.services);
+
+        document.getElementById('last-updated').textContent =
+          `Last updated: ${formatTime(data.timestamp)}`;
+
+      } catch (error) {
+        console.error('Failed to fetch status:', error);
+        showError(`Failed to fetch status: ${error.message}`);
+        updateOverallStatus('major_outage');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    }
+
+    // Initial fetch
+    fetchStatus();
+
+    // Auto-refresh every 30 seconds
+    setInterval(fetchStatus, 30000);
+  </script>
+</body>
+</html>
