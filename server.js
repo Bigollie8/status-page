@@ -76,6 +76,39 @@ const services = [
     endpoint: 'http://nginx:80/health',
     publicUrl: 'https://api.basedsecurity.net',
     category: 'infrastructure'
+  },
+  // Home Server Services (dynamic IP)
+  {
+    id: 'jellyfin',
+    name: 'Jellyfin Media Server',
+    description: 'Media streaming server with GPU transcoding',
+    endpoint: 'https://media.basedsecurity.net/health',
+    publicUrl: 'https://media.basedsecurity.net',
+    category: 'homeserver'
+  },
+  {
+    id: 'nextcloud',
+    name: 'Nextcloud',
+    description: 'Self-hosted cloud storage and collaboration',
+    endpoint: 'https://cloud.basedsecurity.net/status.php',
+    publicUrl: 'https://cloud.basedsecurity.net',
+    category: 'homeserver'
+  },
+  {
+    id: 'vaultwarden',
+    name: 'Vaultwarden',
+    description: 'Self-hosted password manager (Bitwarden compatible)',
+    endpoint: 'https://vault.basedsecurity.net/alive',
+    publicUrl: 'https://vault.basedsecurity.net',
+    category: 'homeserver'
+  },
+  {
+    id: 'openwebui',
+    name: 'Open WebUI + Ollama',
+    description: 'Local AI chat interface with Ollama backend',
+    endpoint: 'https://ai.basedsecurity.net/health',
+    publicUrl: 'https://ai.basedsecurity.net',
+    category: 'homeserver'
   }
 ];
 
