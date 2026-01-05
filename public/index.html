@@ -674,6 +674,33 @@
       font-family: 'SF Mono', Monaco, monospace;
     }
 
+    /* Server Stats Container */
+    #servers-stats-container {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .server-title {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .server-unavailable {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .unavailable-icon {
+      font-size: 1.2rem;
+      color: var(--yellow);
+    }
+
     /* GPU Section Styles */
     .gpu-section {
       margin-top: 20px;
@@ -813,55 +840,110 @@
       </div>
     </div>
 
-    <div class="system-stats" id="system-stats">
-      <div class="system-stats-header">
-        <span>Server Resources</span>
-        <span class="system-hostname" id="system-hostname">Loading...</span>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">CPU Usage</div>
-          <div class="stat-value" id="cpu-value">--%</div>
-          <div class="stat-details" id="cpu-details">-- cores</div>
-          <div class="stat-bar"><div class="stat-bar-fill" id="cpu-bar" style="width: 0%"></div></div>
+    <div id="servers-stats-container">
+      <!-- Cloud Server Stats -->
+      <div class="system-stats" id="cloud-stats">
+        <div class="system-stats-header">
+          <span class="server-title">Cloud Server (AWS)</span>
+          <span class="system-hostname" id="cloud-hostname">Loading...</span>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Memory</div>
-          <div class="stat-value" id="mem-value">--%</div>
-          <div class="stat-details" id="mem-details">-- / --</div>
-          <div class="stat-bar"><div class="stat-bar-fill" id="mem-bar" style="width: 0%"></div></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Disk</div>
-          <div class="stat-value" id="disk-value">--%</div>
-          <div class="stat-details" id="disk-details">-- / --</div>
-          <div class="stat-bar"><div class="stat-bar-fill" id="disk-bar" style="width: 0%"></div></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Uptime</div>
-          <div class="stat-value" id="uptime-value">--</div>
-          <div class="stat-details">
-            <div class="load-averages">
-              <div class="load-item"><span class="load-label">1m</span><span class="load-value" id="load-1m">--</span></div>
-              <div class="load-item"><span class="load-label">5m</span><span class="load-value" id="load-5m">--</span></div>
-              <div class="load-item"><span class="load-label">15m</span><span class="load-value" id="load-15m">--</span></div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">CPU Usage</div>
+            <div class="stat-value" id="cloud-cpu-value">--%</div>
+            <div class="stat-details" id="cloud-cpu-details">-- cores</div>
+            <div class="stat-bar"><div class="stat-bar-fill" id="cloud-cpu-bar" style="width: 0%"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Memory</div>
+            <div class="stat-value" id="cloud-mem-value">--%</div>
+            <div class="stat-details" id="cloud-mem-details">-- / --</div>
+            <div class="stat-bar"><div class="stat-bar-fill" id="cloud-mem-bar" style="width: 0%"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Disk</div>
+            <div class="stat-value" id="cloud-disk-value">--%</div>
+            <div class="stat-details" id="cloud-disk-details">-- / --</div>
+            <div class="stat-bar"><div class="stat-bar-fill" id="cloud-disk-bar" style="width: 0%"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Uptime</div>
+            <div class="stat-value" id="cloud-uptime-value">--</div>
+            <div class="stat-details">
+              <div class="load-averages">
+                <div class="load-item"><span class="load-label">1m</span><span class="load-value" id="cloud-load-1m">--</span></div>
+                <div class="load-item"><span class="load-label">5m</span><span class="load-value" id="cloud-load-5m">--</span></div>
+                <div class="load-item"><span class="load-label">15m</span><span class="load-value" id="cloud-load-15m">--</span></div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="gpu-section" id="gpu-section" style="display: none;">
-        <div class="gpu-header">
-          GPU
-          <span class="gpu-count" id="gpu-count">0</span>
+        <div class="containers-section" id="cloud-containers-section" style="display: none;">
+          <div class="containers-header">
+            Docker Containers
+            <span class="container-count" id="cloud-container-count">0</span>
+          </div>
+          <div class="containers-list" id="cloud-containers-list"></div>
         </div>
-        <div class="gpu-list" id="gpu-list"></div>
       </div>
-      <div class="containers-section" id="containers-section" style="display: none;">
-        <div class="containers-header">
-          Docker Containers
-          <span class="container-count" id="container-count">0</span>
+
+      <!-- Home Server Stats -->
+      <div class="system-stats" id="home-stats">
+        <div class="system-stats-header">
+          <span class="server-title">Home Server</span>
+          <span class="system-hostname" id="home-hostname">Loading...</span>
         </div>
-        <div class="containers-list" id="containers-list"></div>
+        <div class="server-unavailable" id="home-unavailable" style="display: none;">
+          <span class="unavailable-icon">⚠</span>
+          <span>Home server stats unavailable</span>
+        </div>
+        <div id="home-stats-content">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">CPU Usage</div>
+              <div class="stat-value" id="home-cpu-value">--%</div>
+              <div class="stat-details" id="home-cpu-details">-- cores</div>
+              <div class="stat-bar"><div class="stat-bar-fill" id="home-cpu-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Memory</div>
+              <div class="stat-value" id="home-mem-value">--%</div>
+              <div class="stat-details" id="home-mem-details">-- / --</div>
+              <div class="stat-bar"><div class="stat-bar-fill" id="home-mem-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Disk</div>
+              <div class="stat-value" id="home-disk-value">--%</div>
+              <div class="stat-details" id="home-disk-details">-- / --</div>
+              <div class="stat-bar"><div class="stat-bar-fill" id="home-disk-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Uptime</div>
+              <div class="stat-value" id="home-uptime-value">--</div>
+              <div class="stat-details">
+                <div class="load-averages">
+                  <div class="load-item"><span class="load-label">1m</span><span class="load-value" id="home-load-1m">--</span></div>
+                  <div class="load-item"><span class="load-label">5m</span><span class="load-value" id="home-load-5m">--</span></div>
+                  <div class="load-item"><span class="load-label">15m</span><span class="load-value" id="home-load-15m">--</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gpu-section" id="home-gpu-section" style="display: none;">
+            <div class="gpu-header">
+              GPU
+              <span class="gpu-count" id="home-gpu-count">0</span>
+            </div>
+            <div class="gpu-list" id="home-gpu-list"></div>
+          </div>
+          <div class="containers-section" id="home-containers-section" style="display: none;">
+            <div class="containers-header">
+              Docker Containers
+              <span class="container-count" id="home-container-count">0</span>
+            </div>
+            <div class="containers-list" id="home-containers-list"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -926,128 +1008,188 @@
       return 'good';
     }
 
-    function renderSystemStats(stats) {
+    // Render stats for a single server (prefix = 'cloud' or 'home')
+    function renderServerStats(stats, prefix) {
       if (!stats) return;
 
       // Hostname
-      document.getElementById('system-hostname').textContent =
-        `${stats.hostname} (${stats.platform}/${stats.arch})`;
+      const hostnameEl = document.getElementById(`${prefix}-hostname`);
+      if (hostnameEl) {
+        hostnameEl.textContent = `${stats.hostname || 'Unknown'} (${stats.platform || '?'}/${stats.arch || '?'})`;
+      }
 
       // CPU
       const cpuUsage = stats.cpu?.usage || 0;
       const cpuClass = getStatusClass(cpuUsage);
-      document.getElementById('cpu-value').textContent = `${cpuUsage}%`;
-      document.getElementById('cpu-value').className = `stat-value ${cpuClass}`;
-      document.getElementById('cpu-details').textContent =
-        `${stats.cpu?.cores || 0} cores`;
-      document.getElementById('cpu-bar').style.width = `${cpuUsage}%`;
-      document.getElementById('cpu-bar').className = `stat-bar-fill ${cpuClass}`;
+      const cpuValueEl = document.getElementById(`${prefix}-cpu-value`);
+      if (cpuValueEl) {
+        cpuValueEl.textContent = `${cpuUsage}%`;
+        cpuValueEl.className = `stat-value ${cpuClass}`;
+      }
+      const cpuDetailsEl = document.getElementById(`${prefix}-cpu-details`);
+      if (cpuDetailsEl) {
+        cpuDetailsEl.textContent = `${stats.cpu?.cores || 0} cores`;
+      }
+      const cpuBarEl = document.getElementById(`${prefix}-cpu-bar`);
+      if (cpuBarEl) {
+        cpuBarEl.style.width = `${cpuUsage}%`;
+        cpuBarEl.className = `stat-bar-fill ${cpuClass}`;
+      }
 
       // Memory
       const memUsage = stats.memory?.usage || 0;
       const memClass = getStatusClass(memUsage);
-      document.getElementById('mem-value').textContent = `${memUsage}%`;
-      document.getElementById('mem-value').className = `stat-value ${memClass}`;
-      document.getElementById('mem-details').textContent =
-        `${formatBytes(stats.memory?.used || 0)} / ${formatBytes(stats.memory?.total || 0)}`;
-      document.getElementById('mem-bar').style.width = `${memUsage}%`;
-      document.getElementById('mem-bar').className = `stat-bar-fill ${memClass}`;
+      const memValueEl = document.getElementById(`${prefix}-mem-value`);
+      if (memValueEl) {
+        memValueEl.textContent = `${memUsage}%`;
+        memValueEl.className = `stat-value ${memClass}`;
+      }
+      const memDetailsEl = document.getElementById(`${prefix}-mem-details`);
+      if (memDetailsEl) {
+        memDetailsEl.textContent = `${formatBytes(stats.memory?.used || 0)} / ${formatBytes(stats.memory?.total || 0)}`;
+      }
+      const memBarEl = document.getElementById(`${prefix}-mem-bar`);
+      if (memBarEl) {
+        memBarEl.style.width = `${memUsage}%`;
+        memBarEl.className = `stat-bar-fill ${memClass}`;
+      }
 
       // Disk
       const diskUsage = stats.disk?.usage || 0;
       const diskClass = getStatusClass(diskUsage, 80, 95);
-      document.getElementById('disk-value').textContent = `${diskUsage}%`;
-      document.getElementById('disk-value').className = `stat-value ${diskClass}`;
-      document.getElementById('disk-details').textContent =
-        `${formatBytes(stats.disk?.used || 0)} / ${formatBytes(stats.disk?.total || 0)}`;
-      document.getElementById('disk-bar').style.width = `${diskUsage}%`;
-      document.getElementById('disk-bar').className = `stat-bar-fill ${diskClass}`;
+      const diskValueEl = document.getElementById(`${prefix}-disk-value`);
+      if (diskValueEl) {
+        diskValueEl.textContent = `${diskUsage}%`;
+        diskValueEl.className = `stat-value ${diskClass}`;
+      }
+      const diskDetailsEl = document.getElementById(`${prefix}-disk-details`);
+      if (diskDetailsEl) {
+        diskDetailsEl.textContent = `${formatBytes(stats.disk?.used || 0)} / ${formatBytes(stats.disk?.total || 0)}`;
+      }
+      const diskBarEl = document.getElementById(`${prefix}-disk-bar`);
+      if (diskBarEl) {
+        diskBarEl.style.width = `${diskUsage}%`;
+        diskBarEl.className = `stat-bar-fill ${diskClass}`;
+      }
 
       // Uptime
-      document.getElementById('uptime-value').textContent = stats.uptimeFormatted || '--';
-      document.getElementById('uptime-value').className = 'stat-value good';
+      const uptimeValueEl = document.getElementById(`${prefix}-uptime-value`);
+      if (uptimeValueEl) {
+        uptimeValueEl.textContent = stats.uptimeFormatted || '--';
+        uptimeValueEl.className = 'stat-value good';
+      }
 
       // Load averages
-      document.getElementById('load-1m').textContent = stats.loadAverage?.['1m'] || '--';
-      document.getElementById('load-5m').textContent = stats.loadAverage?.['5m'] || '--';
-      document.getElementById('load-15m').textContent = stats.loadAverage?.['15m'] || '--';
+      const load1mEl = document.getElementById(`${prefix}-load-1m`);
+      if (load1mEl) load1mEl.textContent = stats.loadAverage?.['1m'] || '--';
+      const load5mEl = document.getElementById(`${prefix}-load-5m`);
+      if (load5mEl) load5mEl.textContent = stats.loadAverage?.['5m'] || '--';
+      const load15mEl = document.getElementById(`${prefix}-load-15m`);
+      if (load15mEl) load15mEl.textContent = stats.loadAverage?.['15m'] || '--';
 
-      // GPU stats
+      // GPU stats (only for home server typically)
       const gpus = stats.gpu || [];
-      const gpuSection = document.getElementById('gpu-section');
-      const gpuList = document.getElementById('gpu-list');
-      const gpuCount = document.getElementById('gpu-count');
+      const gpuSection = document.getElementById(`${prefix}-gpu-section`);
+      const gpuList = document.getElementById(`${prefix}-gpu-list`);
+      const gpuCount = document.getElementById(`${prefix}-gpu-count`);
 
-      if (gpus.length > 0) {
-        gpuSection.style.display = 'block';
-        gpuCount.textContent = gpus.length;
-        gpuList.innerHTML = gpus.map(gpu => {
-          const usageClass = getStatusClass(gpu.usage);
-          const memClass = getStatusClass(gpu.memoryUsage);
-          const tempClass = gpu.temperature >= 85 ? 'critical' : (gpu.temperature >= 70 ? 'warning' : 'good');
-          return `
-            <div class="gpu-card">
-              <div class="gpu-name">${escapeHtml(gpu.name)}</div>
-              <div class="gpu-stats-grid">
-                <div class="gpu-stat">
-                  <span class="gpu-stat-label">GPU Usage</span>
-                  <span class="gpu-stat-value ${usageClass}">${gpu.usage}%</span>
-                  <div class="gpu-bar"><div class="gpu-bar-fill ${usageClass}" style="width: ${gpu.usage}%"></div></div>
-                </div>
-                <div class="gpu-stat">
-                  <span class="gpu-stat-label">VRAM</span>
-                  <span class="gpu-stat-value ${memClass}">${gpu.memoryUsage}%</span>
-                  <div class="gpu-bar"><div class="gpu-bar-fill ${memClass}" style="width: ${gpu.memoryUsage}%"></div></div>
-                </div>
-                <div class="gpu-stat">
-                  <span class="gpu-stat-label">Temperature</span>
-                  <span class="gpu-stat-value ${tempClass}">${gpu.temperature}°C</span>
-                </div>
-                <div class="gpu-stat">
-                  <span class="gpu-stat-label">Power</span>
-                  <span class="gpu-stat-value">${gpu.powerDraw.toFixed(0)}W</span>
+      if (gpuSection && gpuList && gpuCount) {
+        if (gpus.length > 0) {
+          gpuSection.style.display = 'block';
+          gpuCount.textContent = gpus.length;
+          gpuList.innerHTML = gpus.map(gpu => {
+            const usageClass = getStatusClass(gpu.usage);
+            const memClass = getStatusClass(gpu.memoryUsage);
+            const tempClass = gpu.temperature >= 85 ? 'critical' : (gpu.temperature >= 70 ? 'warning' : 'good');
+            return `
+              <div class="gpu-card">
+                <div class="gpu-name">${escapeHtml(gpu.name)}</div>
+                <div class="gpu-stats-grid">
+                  <div class="gpu-stat">
+                    <span class="gpu-stat-label">GPU Usage</span>
+                    <span class="gpu-stat-value ${usageClass}">${gpu.usage}%</span>
+                    <div class="gpu-bar"><div class="gpu-bar-fill ${usageClass}" style="width: ${gpu.usage}%"></div></div>
+                  </div>
+                  <div class="gpu-stat">
+                    <span class="gpu-stat-label">VRAM</span>
+                    <span class="gpu-stat-value ${memClass}">${gpu.memoryUsage}%</span>
+                    <div class="gpu-bar"><div class="gpu-bar-fill ${memClass}" style="width: ${gpu.memoryUsage}%"></div></div>
+                  </div>
+                  <div class="gpu-stat">
+                    <span class="gpu-stat-label">Temperature</span>
+                    <span class="gpu-stat-value ${tempClass}">${gpu.temperature}°C</span>
+                  </div>
+                  <div class="gpu-stat">
+                    <span class="gpu-stat-label">Power</span>
+                    <span class="gpu-stat-value">${gpu.powerDraw.toFixed(0)}W</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          `;
-        }).join('');
-      } else {
-        gpuSection.style.display = 'none';
+            `;
+          }).join('');
+        } else {
+          gpuSection.style.display = 'none';
+        }
       }
 
       // Docker containers
       const containers = stats.containers || [];
-      const containersSection = document.getElementById('containers-section');
-      const containersList = document.getElementById('containers-list');
-      const containerCount = document.getElementById('container-count');
+      const containersSection = document.getElementById(`${prefix}-containers-section`);
+      const containersList = document.getElementById(`${prefix}-containers-list`);
+      const containerCount = document.getElementById(`${prefix}-container-count`);
 
-      if (containers.length > 0) {
-        containersSection.style.display = 'block';
-        containerCount.textContent = containers.length;
-        containersList.innerHTML = containers.map(c => `
-          <div class="container-item">
-            <span class="container-name">${escapeHtml(c.name)}</span>
-            <div class="container-stats">
-              <span>CPU: ${c.cpu.toFixed(1)}%</span>
-              <span>MEM: ${c.memPercent.toFixed(1)}%</span>
+      if (containersSection && containersList && containerCount) {
+        if (containers.length > 0) {
+          containersSection.style.display = 'block';
+          containerCount.textContent = containers.length;
+          containersList.innerHTML = containers.map(c => `
+            <div class="container-item">
+              <span class="container-name">${escapeHtml(c.name)}</span>
+              <div class="container-stats">
+                <span>CPU: ${c.cpu.toFixed(1)}%</span>
+                <span>MEM: ${c.memPercent.toFixed(1)}%</span>
+              </div>
             </div>
-          </div>
-        `).join('');
+          `).join('');
+        } else {
+          containersSection.style.display = 'none';
+        }
+      }
+    }
+
+    // Render all server stats (cloud + home)
+    function renderAllServerStats(data) {
+      if (!data) return;
+
+      // Render cloud server stats
+      if (data.cloud) {
+        renderServerStats(data.cloud, 'cloud');
+      }
+
+      // Render home server stats
+      const homeUnavailable = document.getElementById('home-unavailable');
+      const homeStatsContent = document.getElementById('home-stats-content');
+
+      if (data.home && data.home.available) {
+        if (homeUnavailable) homeUnavailable.style.display = 'none';
+        if (homeStatsContent) homeStatsContent.style.display = 'block';
+        renderServerStats(data.home, 'home');
       } else {
-        containersSection.style.display = 'none';
+        if (homeUnavailable) homeUnavailable.style.display = 'flex';
+        if (homeStatsContent) homeStatsContent.style.display = 'none';
       }
     }
 
     async function fetchSystemStats() {
       try {
         const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
-        const response = await fetch(basePath + '/api/system');
+        const response = await fetch(basePath + '/api/servers');
         if (response.ok) {
           const stats = await response.json();
-          renderSystemStats(stats);
+          renderAllServerStats(stats);
         }
       } catch (error) {
-        console.error('Failed to fetch system stats:', error);
+        console.error('Failed to fetch server stats:', error);
       }
     }
 

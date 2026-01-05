@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  home-stats-agent:
+    build: .
+    image: home-stats-agent:latest
+    container_name: home-stats-agent
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+      - SERVER_NAME=Home Server
+      - API_KEY=${API_KEY:-home-stats-secret-key}
+    volumes:
+      # Mount docker socket for container stats
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # For GPU monitoring, use nvidia runtime
+    # runtime: nvidia
+    networks:
+      - home-network
+
+networks:
+  home-network:
+    external: true

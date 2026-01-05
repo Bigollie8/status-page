@@ -11,6 +11,15 @@ const PORT = process.env.PORT || 3004;
 const INCIDENTS_FILE = path.join(__dirname, 'data', 'incidents.json');
 const INCIDENTS_RETENTION_DAYS = 90;
 
+// Home server stats agent configuration
+const HOME_STATS_URL = process.env.HOME_STATS_URL || 'https://stats.basedsecurity.net/stats';
+const HOME_STATS_KEY = process.env.HOME_STATS_KEY || 'home-stats-secret-key';
+
+// Cache for home server stats (refresh every 10 seconds)
+let homeStatsCache = null;
+let homeStatsCacheTime = 0;
+const HOME_STATS_CACHE_TTL = 10000; // 10 seconds
+
 // Enable CORS for all routes
 app.use(cors());
 
@@ -430,6 +439,74 @@ function formatUptime(seconds) {
   return `${minutes}m`;
 }
 
+// Fetch home server stats from agent
+async function fetchHomeStats() {
+  const now = Date.now();
+
+  // Return cached stats if still valid
+  if (homeStatsCache && (now - homeStatsCacheTime) < HOME_STATS_CACHE_TTL) {
+    return homeStatsCache;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(HOME_STATS_URL, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'X-API-Key': HOME_STATS_KEY,
+        'Accept': 'application/json'
+      }
+    });
+
+    clearTimeout(timeout);
+
+    if (response.ok) {
+      const stats = await response.json();
+      homeStatsCache = {
+        ...stats,
+        available: true,
+        lastUpdated: new Date().toISOString()
+      };
+      homeStatsCacheTime = now;
+      return homeStatsCache;
+    } else {
+      console.error(`Home stats fetch failed: HTTP ${response.status}`);
+      return {
+        available: false,
+        error: `HTTP ${response.status}`,
+        lastUpdated: new Date().toISOString()
+      };
+    }
+  } catch (error) {
+    console.error('Home stats fetch error:', error.message);
+    return {
+      available: false,
+      error: error.name === 'AbortError' ? 'Timeout' : error.message,
+      lastUpdated: new Date().toISOString()
+    };
+  }
+}
+
+// Get combined stats from all servers
+async function getAllServerStats() {
+  const [cloudStats, homeStats] = await Promise.all([
+    Promise.resolve(getSystemStats()),
+    fetchHomeStats()
+  ]);
+
+  return {
+    cloud: {
+      serverName: 'Cloud Server (AWS)',
+      ...cloudStats
+    },
+    home: homeStats,
+    timestamp: new Date().toISOString()
+  };
+}
+
 // Check all services and track incidents
 async function checkAllServices() {
   const results = await Promise.all(services.map(checkService));
@@ -533,6 +610,21 @@ app.get('/status/api/system', (req, res) => {
     });
   }
 });
+
+// Combined server stats API endpoint (cloud + home)
+async function handleServersRequest(req, res) {
+  try {
+    const stats = await getAllServerStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to get server stats',
+      message: error.message
+    });
+  }
+}
+app.get('/api/servers', handleServersRequest);
+app.get('/status/api/servers', handleServersRequest);
 
 // Serve index.html for all other routes
 app.get('*', (req, res) => {
