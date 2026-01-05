@@ -579,6 +579,12 @@
       color: var(--text-secondary);
     }
 
+    .stat-details.docker-mem {
+      font-size: 0.75rem;
+      color: var(--blue);
+      margin-top: 2px;
+    }
+
     .stat-bar {
       height: 6px;
       background: var(--bg-primary);
@@ -909,6 +915,7 @@
               <div class="stat-label">Memory</div>
               <div class="stat-value" id="home-mem-value">--%</div>
               <div class="stat-details" id="home-mem-details">-- / --</div>
+              <div class="stat-details docker-mem" id="home-docker-mem">Docker: --</div>
               <div class="stat-bar"><div class="stat-bar-fill" id="home-mem-bar" style="width: 0%"></div></div>
             </div>
             <div class="stat-card">
@@ -1047,6 +1054,14 @@
       const memDetailsEl = document.getElementById(`${prefix}-mem-details`);
       if (memDetailsEl) {
         memDetailsEl.textContent = `${formatBytes(stats.memory?.used || 0)} / ${formatBytes(stats.memory?.total || 0)}`;
+      }
+      // Docker memory (home server only)
+      const dockerMemEl = document.getElementById(`${prefix}-docker-mem`);
+      if (dockerMemEl && stats.memory?.dockerUsed !== undefined) {
+        dockerMemEl.textContent = `Docker: ${formatBytes(stats.memory.dockerUsed)}`;
+        dockerMemEl.style.display = 'block';
+      } else if (dockerMemEl) {
+        dockerMemEl.style.display = 'none';
       }
       const memBarEl = document.getElementById(`${prefix}-mem-bar`);
       if (memBarEl) {
