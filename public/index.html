@@ -653,6 +653,65 @@
     .stat-bar-fill.warning { background: var(--yellow); }
     .stat-bar-fill.critical { background: var(--red); }
 
+    /* Multi-disk display */
+    .disks-card {
+      grid-column: span 1;
+    }
+
+    .disks-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .disk-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .disk-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .disk-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .disk-name {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .disk-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-left: 6px;
+    }
+
+    .disk-usage {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .disk-usage.good { color: var(--green); }
+    .disk-usage.warning { color: var(--yellow); }
+    .disk-usage.critical { color: var(--red); }
+
+    .disk-details {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .disk-item .stat-bar {
+      margin-top: 4px;
+    }
+
     .load-averages {
       display: flex;
       gap: 16px;
@@ -975,11 +1034,18 @@
                 <span class="legend-item"><span class="legend-color docker"></span>Docker</span>
               </div>
             </div>
-            <div class="stat-card">
-              <div class="stat-label">Disk</div>
-              <div class="stat-value" id="home-disk-value">--%</div>
-              <div class="stat-details" id="home-disk-details">-- / --</div>
-              <div class="stat-bar"><div class="stat-bar-fill" id="home-disk-bar" style="width: 0%"></div></div>
+            <div class="stat-card disks-card">
+              <div class="stat-label">Storage</div>
+              <div class="disks-container" id="home-disks-container">
+                <div class="disk-item">
+                  <div class="disk-header">
+                    <span class="disk-name">--</span>
+                    <span class="disk-usage">--%</span>
+                  </div>
+                  <div class="disk-details">-- / --</div>
+                  <div class="stat-bar"><div class="stat-bar-fill" style="width: 0%"></div></div>
+                </div>
+              </div>
             </div>
             <div class="stat-card">
               <div class="stat-label">Uptime</div>
@@ -1133,22 +1199,44 @@
         memBarEl.className = `stat-bar-fill ${memClass}`;
       }
 
-      // Disk
-      const diskUsage = stats.disk?.usage || 0;
-      const diskClass = getStatusClass(diskUsage, 80, 95);
-      const diskValueEl = document.getElementById(`${prefix}-disk-value`);
-      if (diskValueEl) {
-        diskValueEl.textContent = `${diskUsage}%`;
-        diskValueEl.className = `stat-value ${diskClass}`;
-      }
-      const diskDetailsEl = document.getElementById(`${prefix}-disk-details`);
-      if (diskDetailsEl) {
-        diskDetailsEl.textContent = `${formatBytes(stats.disk?.used || 0)} / ${formatBytes(stats.disk?.total || 0)}`;
-      }
-      const diskBarEl = document.getElementById(`${prefix}-disk-bar`);
-      if (diskBarEl) {
-        diskBarEl.style.width = `${diskUsage}%`;
-        diskBarEl.className = `stat-bar-fill ${diskClass}`;
+      // Disk(s) - handle multiple disks for home server
+      const disksContainer = document.getElementById(`${prefix}-disks-container`);
+      if (disksContainer && stats.disks && stats.disks.length > 0) {
+        // Render multiple disks
+        disksContainer.innerHTML = stats.disks.map(disk => {
+          const diskClass = getStatusClass(disk.usage, 80, 95);
+          return `
+            <div class="disk-item">
+              <div class="disk-header">
+                <span>
+                  <span class="disk-name">${disk.mount}</span>
+                  ${disk.label ? `<span class="disk-label">${disk.label}</span>` : ''}
+                </span>
+                <span class="disk-usage ${diskClass}">${disk.usage}%</span>
+              </div>
+              <div class="disk-details">${formatBytes(disk.used)} / ${formatBytes(disk.total)}</div>
+              <div class="stat-bar"><div class="stat-bar-fill ${diskClass}" style="width: ${disk.usage}%"></div></div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        // Fallback to single disk display
+        const diskUsage = stats.disk?.usage || 0;
+        const diskClass = getStatusClass(diskUsage, 80, 95);
+        const diskValueEl = document.getElementById(`${prefix}-disk-value`);
+        if (diskValueEl) {
+          diskValueEl.textContent = `${diskUsage}%`;
+          diskValueEl.className = `stat-value ${diskClass}`;
+        }
+        const diskDetailsEl = document.getElementById(`${prefix}-disk-details`);
+        if (diskDetailsEl) {
+          diskDetailsEl.textContent = `${formatBytes(stats.disk?.used || 0)} / ${formatBytes(stats.disk?.total || 0)}`;
+        }
+        const diskBarEl = document.getElementById(`${prefix}-disk-bar`);
+        if (diskBarEl) {
+          diskBarEl.style.width = `${diskUsage}%`;
+          diskBarEl.className = `stat-bar-fill ${diskClass}`;
+        }
       }
 
       // Uptime
