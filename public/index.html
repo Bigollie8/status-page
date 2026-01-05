@@ -481,7 +481,9 @@
       btn.classList.add('loading');
 
       try {
-        const response = await fetch('/api/status');
+        // Use relative path that works under /status prefix or root
+        const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
+        const response = await fetch(basePath + '/api/status');
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);

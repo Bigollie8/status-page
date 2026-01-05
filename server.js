@@ -82,7 +82,7 @@ const services = [
     id: 'jellyfin',
     name: 'Jellyfin Media Server',
     description: 'Media streaming server with GPU transcoding',
-    endpoint: 'https://media.basedsecurity.net/health',
+    endpoint: 'https://media.basedsecurity.net/System/Info/Public',
     publicUrl: 'https://media.basedsecurity.net',
     category: 'homeserver'
   },
@@ -98,7 +98,7 @@ const services = [
     id: 'vaultwarden',
     name: 'Vaultwarden',
     description: 'Self-hosted password manager (Bitwarden compatible)',
-    endpoint: 'https://vault.basedsecurity.net/alive',
+    endpoint: 'https://vault.basedsecurity.net/',
     publicUrl: 'https://vault.basedsecurity.net',
     category: 'homeserver'
   },
@@ -106,7 +106,7 @@ const services = [
     id: 'openwebui',
     name: 'Open WebUI + Ollama',
     description: 'Local AI chat interface with Ollama backend',
-    endpoint: 'https://ai.basedsecurity.net/health',
+    endpoint: 'https://ai.basedsecurity.net/',
     publicUrl: 'https://ai.basedsecurity.net',
     category: 'homeserver'
   }
@@ -221,16 +221,20 @@ async function checkAllServices() {
   };
 }
 
-// Serve static files
+// Serve static files at root and /status prefix
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/status', express.static(path.join(__dirname, 'public')));
 
-// Health check endpoint
+// Health check endpoint (both paths for flexibility)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'status-page' });
 });
+app.get('/status/health', (req, res) => {
+  res.json({ status: 'ok', service: 'status-page' });
+});
 
-// Status API endpoint
-app.get('/api/status', async (req, res) => {
+// Status API endpoint (both paths for flexibility)
+async function handleStatusRequest(req, res) {
   try {
     const status = await checkAllServices();
     res.json(status);
@@ -240,7 +244,9 @@ app.get('/api/status', async (req, res) => {
       message: error.message
     });
   }
-});
+}
+app.get('/api/status', handleStatusRequest);
+app.get('/status/api/status', handleStatusRequest);
 
 // Serve index.html for all other routes
 app.get('*', (req, res) => {
