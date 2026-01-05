@@ -585,6 +585,34 @@
       margin-top: 2px;
     }
 
+    .bar-legend {
+      display: flex;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 0.7rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-secondary);
+    }
+
+    .legend-color {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .legend-color.used {
+      background: var(--green);
+    }
+
+    .legend-color.docker {
+      background: var(--blue);
+    }
+
     .stat-bar {
       height: 6px;
       background: var(--bg-primary);
@@ -593,10 +621,32 @@
       overflow: hidden;
     }
 
+    .stat-bar.layered {
+      position: relative;
+      height: 10px;
+    }
+
     .stat-bar-fill {
       height: 100%;
       border-radius: 3px;
       transition: width 0.3s ease;
+    }
+
+    .stat-bar.layered .stat-bar-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .stat-bar-docker {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: var(--blue);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      opacity: 0.9;
     }
 
     .stat-bar-fill.good { background: var(--green); }
@@ -916,7 +966,14 @@
               <div class="stat-value" id="home-mem-value">--%</div>
               <div class="stat-details" id="home-mem-details">-- / --</div>
               <div class="stat-details docker-mem" id="home-docker-mem">Docker: --</div>
-              <div class="stat-bar"><div class="stat-bar-fill" id="home-mem-bar" style="width: 0%"></div></div>
+              <div class="stat-bar layered">
+                <div class="stat-bar-fill" id="home-mem-bar" style="width: 0%"></div>
+                <div class="stat-bar-docker" id="home-docker-bar" style="width: 0%"></div>
+              </div>
+              <div class="bar-legend">
+                <span class="legend-item"><span class="legend-color used"></span>System</span>
+                <span class="legend-item"><span class="legend-color docker"></span>Docker</span>
+              </div>
             </div>
             <div class="stat-card">
               <div class="stat-label">Disk</div>
@@ -1057,11 +1114,18 @@
       }
       // Docker memory (home server only)
       const dockerMemEl = document.getElementById(`${prefix}-docker-mem`);
+      const dockerBarEl = document.getElementById(`${prefix}-docker-bar`);
       if (dockerMemEl && stats.memory?.dockerUsed !== undefined) {
         dockerMemEl.textContent = `Docker: ${formatBytes(stats.memory.dockerUsed)}`;
         dockerMemEl.style.display = 'block';
+        // Calculate Docker usage as percentage of total
+        if (dockerBarEl && stats.memory.total > 0) {
+          const dockerPercent = (stats.memory.dockerUsed / stats.memory.total) * 100;
+          dockerBarEl.style.width = `${dockerPercent}%`;
+        }
       } else if (dockerMemEl) {
         dockerMemEl.style.display = 'none';
+        if (dockerBarEl) dockerBarEl.style.width = '0%';
       }
       const memBarEl = document.getElementById(`${prefix}-mem-bar`);
       if (memBarEl) {
