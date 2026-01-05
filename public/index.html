@@ -653,49 +653,57 @@
     .stat-bar-fill.warning { background: var(--yellow); }
     .stat-bar-fill.critical { background: var(--red); }
 
-    /* Multi-disk display */
-    .disks-card {
-      grid-column: span 1;
+    /* Storage section - full width below stats grid */
+    .storage-section {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
     }
 
-    .disks-container {
-      display: flex;
-      flex-direction: column;
+    .storage-header {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .disks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 12px;
     }
 
     .disk-item {
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .disk-item:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      padding: 12px;
     }
 
     .disk-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 4px;
+      align-items: flex-start;
+      margin-bottom: 6px;
     }
 
     .disk-name {
-      font-size: 0.85rem;
-      font-weight: 500;
+      font-size: 0.9rem;
+      font-weight: 600;
       color: var(--text-primary);
     }
 
     .disk-label {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       color: var(--text-muted);
-      margin-left: 6px;
+      display: block;
+      margin-top: 2px;
     }
 
     .disk-usage {
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 1.1rem;
+      font-weight: 700;
     }
 
     .disk-usage.good { color: var(--green); }
@@ -703,13 +711,14 @@
     .disk-usage.critical { color: var(--red); }
 
     .disk-details {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--text-secondary);
       margin-bottom: 6px;
     }
 
     .disk-item .stat-bar {
-      margin-top: 4px;
+      margin-top: 6px;
+      height: 4px;
     }
 
     .load-averages {
@@ -923,7 +932,17 @@
         grid-template-columns: 1fr;
       }
 
+      .disks-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
       .containers-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .disks-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -984,13 +1003,7 @@
           <div class="stat-card">
             <div class="stat-label">Uptime</div>
             <div class="stat-value" id="cloud-uptime-value">--</div>
-            <div class="stat-details">
-              <div class="load-averages">
-                <div class="load-item"><span class="load-label">1m</span><span class="load-value" id="cloud-load-1m">--</span></div>
-                <div class="load-item"><span class="load-label">5m</span><span class="load-value" id="cloud-load-5m">--</span></div>
-                <div class="load-item"><span class="load-label">15m</span><span class="load-value" id="cloud-load-15m">--</span></div>
-              </div>
-            </div>
+            <div class="stat-details" id="cloud-uptime-details"></div>
           </div>
         </div>
         <div class="containers-section" id="cloud-containers-section" style="display: none;">
@@ -1034,28 +1047,22 @@
                 <span class="legend-item"><span class="legend-color docker"></span>Docker</span>
               </div>
             </div>
-            <div class="stat-card disks-card">
-              <div class="stat-label">Storage</div>
-              <div class="disks-container" id="home-disks-container">
-                <div class="disk-item">
-                  <div class="disk-header">
-                    <span class="disk-name">--</span>
-                    <span class="disk-usage">--%</span>
-                  </div>
-                  <div class="disk-details">-- / --</div>
-                  <div class="stat-bar"><div class="stat-bar-fill" style="width: 0%"></div></div>
-                </div>
-              </div>
-            </div>
             <div class="stat-card">
               <div class="stat-label">Uptime</div>
               <div class="stat-value" id="home-uptime-value">--</div>
-              <div class="stat-details">
-                <div class="load-averages">
-                  <div class="load-item"><span class="load-label">1m</span><span class="load-value" id="home-load-1m">--</span></div>
-                  <div class="load-item"><span class="load-label">5m</span><span class="load-value" id="home-load-5m">--</span></div>
-                  <div class="load-item"><span class="load-label">15m</span><span class="load-value" id="home-load-15m">--</span></div>
+              <div class="stat-details" id="home-uptime-details"></div>
+            </div>
+          </div>
+          <div class="storage-section">
+            <div class="storage-header">Storage</div>
+            <div class="disks-grid" id="home-disks-container">
+              <div class="disk-item">
+                <div class="disk-header">
+                  <div><span class="disk-name">--</span></div>
+                  <span class="disk-usage">--%</span>
                 </div>
+                <div class="disk-details">-- / --</div>
+                <div class="stat-bar"><div class="stat-bar-fill" style="width: 0%"></div></div>
               </div>
             </div>
           </div>
@@ -1202,16 +1209,16 @@
       // Disk(s) - handle multiple disks for home server
       const disksContainer = document.getElementById(`${prefix}-disks-container`);
       if (disksContainer && stats.disks && stats.disks.length > 0) {
-        // Render multiple disks
+        // Render multiple disks in grid layout
         disksContainer.innerHTML = stats.disks.map(disk => {
           const diskClass = getStatusClass(disk.usage, 80, 95);
           return `
             <div class="disk-item">
               <div class="disk-header">
-                <span>
+                <div>
                   <span class="disk-name">${disk.mount}</span>
                   ${disk.label ? `<span class="disk-label">${disk.label}</span>` : ''}
-                </span>
+                </div>
                 <span class="disk-usage ${diskClass}">${disk.usage}%</span>
               </div>
               <div class="disk-details">${formatBytes(disk.used)} / ${formatBytes(disk.total)}</div>
@@ -1219,24 +1226,20 @@
             </div>
           `;
         }).join('');
-      } else {
+      } else if (disksContainer && stats.disk) {
         // Fallback to single disk display
         const diskUsage = stats.disk?.usage || 0;
         const diskClass = getStatusClass(diskUsage, 80, 95);
-        const diskValueEl = document.getElementById(`${prefix}-disk-value`);
-        if (diskValueEl) {
-          diskValueEl.textContent = `${diskUsage}%`;
-          diskValueEl.className = `stat-value ${diskClass}`;
-        }
-        const diskDetailsEl = document.getElementById(`${prefix}-disk-details`);
-        if (diskDetailsEl) {
-          diskDetailsEl.textContent = `${formatBytes(stats.disk?.used || 0)} / ${formatBytes(stats.disk?.total || 0)}`;
-        }
-        const diskBarEl = document.getElementById(`${prefix}-disk-bar`);
-        if (diskBarEl) {
-          diskBarEl.style.width = `${diskUsage}%`;
-          diskBarEl.className = `stat-bar-fill ${diskClass}`;
-        }
+        disksContainer.innerHTML = `
+          <div class="disk-item">
+            <div class="disk-header">
+              <div><span class="disk-name">${stats.disk.mount || 'Disk'}</span></div>
+              <span class="disk-usage ${diskClass}">${diskUsage}%</span>
+            </div>
+            <div class="disk-details">${formatBytes(stats.disk?.used || 0)} / ${formatBytes(stats.disk?.total || 0)}</div>
+            <div class="stat-bar"><div class="stat-bar-fill ${diskClass}" style="width: ${diskUsage}%"></div></div>
+          </div>
+        `;
       }
 
       // Uptime
@@ -1246,13 +1249,23 @@
         uptimeValueEl.className = 'stat-value good';
       }
 
-      // Load averages
-      const load1mEl = document.getElementById(`${prefix}-load-1m`);
-      if (load1mEl) load1mEl.textContent = stats.loadAverage?.['1m'] || '--';
-      const load5mEl = document.getElementById(`${prefix}-load-5m`);
-      if (load5mEl) load5mEl.textContent = stats.loadAverage?.['5m'] || '--';
-      const load15mEl = document.getElementById(`${prefix}-load-15m`);
-      if (load15mEl) load15mEl.textContent = stats.loadAverage?.['15m'] || '--';
+      // Uptime details (OS info or load averages)
+      const uptimeDetailsEl = document.getElementById(`${prefix}-uptime-details`);
+      if (uptimeDetailsEl) {
+        if (stats.distro) {
+          // Windows - show OS info
+          uptimeDetailsEl.textContent = stats.distro;
+        } else if (stats.loadAverage) {
+          // Linux - show load averages
+          uptimeDetailsEl.innerHTML = `
+            <div class="load-averages">
+              <div class="load-item"><span class="load-label">1m</span><span class="load-value">${stats.loadAverage['1m'] || '--'}</span></div>
+              <div class="load-item"><span class="load-label">5m</span><span class="load-value">${stats.loadAverage['5m'] || '--'}</span></div>
+              <div class="load-item"><span class="load-label">15m</span><span class="load-value">${stats.loadAverage['15m'] || '--'}</span></div>
+            </div>
+          `;
+        }
+      }
 
       // GPU stats (only for home server typically)
       const gpus = stats.gpu || [];
