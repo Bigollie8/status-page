@@ -825,17 +825,97 @@
       color: var(--yellow);
     }
 
+    /* CPU Details Section */
+    .cpu-details-section {
+      margin-top: 16px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .cpu-details-header {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cpu-model {
+      font-size: 0.7rem;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .cpu-cores-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 8px;
+    }
+
+    .cpu-core-item {
+      background: var(--bg-primary);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .cpu-core-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .cpu-core-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .cpu-core-value.good { color: var(--green); }
+    .cpu-core-value.warning { color: var(--yellow); }
+    .cpu-core-value.critical { color: var(--red); }
+
+    .cpu-core-bar {
+      height: 3px;
+      background: var(--bg-secondary);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .cpu-core-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .cpu-core-bar-fill.good { background: var(--green); }
+    .cpu-core-bar-fill.warning { background: var(--yellow); }
+    .cpu-core-bar-fill.critical { background: var(--red); }
+
     /* GPU Section Styles */
     .gpu-section {
-      margin-top: 20px;
-      border-top: 1px solid var(--border-color);
-      padding-top: 16px;
+      margin-top: 16px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
     }
 
     .gpu-header {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-secondary);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
       margin-bottom: 12px;
       display: flex;
       align-items: center;
@@ -843,11 +923,13 @@
     }
 
     .gpu-count {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       padding: 2px 8px;
-      border-radius: 10px;
-      background: var(--bg-tertiary);
-      color: var(--text-muted);
+      border-radius: 4px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      text-transform: none;
+      letter-spacing: 0;
     }
 
     .gpu-list {
@@ -1031,6 +1113,7 @@
               <div class="stat-label">CPU Usage</div>
               <div class="stat-value" id="home-cpu-value">--%</div>
               <div class="stat-details" id="home-cpu-details">-- cores</div>
+              <div class="stat-details" id="home-cpu-speed" style="color: var(--text-muted);"></div>
               <div class="stat-bar"><div class="stat-bar-fill" id="home-cpu-bar" style="width: 0%"></div></div>
             </div>
             <div class="stat-card">
@@ -1065,6 +1148,13 @@
                 <div class="stat-bar"><div class="stat-bar-fill" style="width: 0%"></div></div>
               </div>
             </div>
+          </div>
+          <div class="cpu-details-section" id="home-cpu-section" style="display: none;">
+            <div class="cpu-details-header">
+              CPU Cores
+              <span class="cpu-model" id="home-cpu-model"></span>
+            </div>
+            <div class="cpu-cores-grid" id="home-cpu-cores"></div>
           </div>
           <div class="gpu-section" id="home-gpu-section" style="display: none;">
             <div class="gpu-header">
@@ -1165,12 +1255,43 @@
       }
       const cpuDetailsEl = document.getElementById(`${prefix}-cpu-details`);
       if (cpuDetailsEl) {
-        cpuDetailsEl.textContent = `${stats.cpu?.cores || 0} cores`;
+        const physCores = stats.cpu?.physicalCores || Math.floor((stats.cpu?.cores || 0) / 2);
+        const logCores = stats.cpu?.cores || stats.cpu?.perCore?.length || 0;
+        cpuDetailsEl.textContent = `${physCores} cores / ${logCores} threads`;
+      }
+      const cpuSpeedEl = document.getElementById(`${prefix}-cpu-speed`);
+      if (cpuSpeedEl && stats.cpu?.speed) {
+        cpuSpeedEl.textContent = `${stats.cpu.speed.toFixed(2)} GHz`;
       }
       const cpuBarEl = document.getElementById(`${prefix}-cpu-bar`);
       if (cpuBarEl) {
         cpuBarEl.style.width = `${cpuUsage}%`;
         cpuBarEl.className = `stat-bar-fill ${cpuClass}`;
+      }
+
+      // CPU per-core details
+      const cpuSection = document.getElementById(`${prefix}-cpu-section`);
+      const cpuCoresEl = document.getElementById(`${prefix}-cpu-cores`);
+      const cpuModelEl = document.getElementById(`${prefix}-cpu-model`);
+      const perCore = stats.cpu?.perCore || [];
+
+      if (cpuSection && cpuCoresEl && perCore.length > 0) {
+        cpuSection.style.display = 'block';
+        if (cpuModelEl && stats.cpu?.model) {
+          cpuModelEl.textContent = stats.cpu.model;
+        }
+        cpuCoresEl.innerHTML = perCore.map((core, i) => {
+          const coreClass = getStatusClass(core.usage);
+          return `
+            <div class="cpu-core-item">
+              <div class="cpu-core-label">Core ${i}</div>
+              <div class="cpu-core-value ${coreClass}">${core.usage}%</div>
+              <div class="cpu-core-bar"><div class="cpu-core-bar-fill ${coreClass}" style="width: ${core.usage}%"></div></div>
+            </div>
+          `;
+        }).join('');
+      } else if (cpuSection) {
+        cpuSection.style.display = 'none';
       }
 
       // Memory
