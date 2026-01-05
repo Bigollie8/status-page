@@ -11,6 +11,12 @@ RUN npm install --production
 # Copy application code
 COPY . .
 
+# Create data directory for persistent incident storage
+RUN mkdir -p /app/data
+
+# Volume for persistent data
+VOLUME ["/app/data"]
+
 # Expose port
 EXPOSE 3004
 

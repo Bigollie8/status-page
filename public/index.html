@@ -181,6 +181,54 @@
       color: var(--text-secondary);
     }
 
+    .service-error {
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      border-left: 3px solid var(--red);
+      font-size: 0.8rem;
+    }
+
+    .service-error.degraded {
+      border-left-color: var(--yellow);
+    }
+
+    .service-error-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--red);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .service-error.degraded .service-error-header {
+      color: var(--yellow);
+    }
+
+    .service-error-message {
+      color: var(--text-secondary);
+      word-break: break-word;
+    }
+
+    .service-error-details {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border-color);
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      word-break: break-all;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    .service-error-icon {
+      width: 14px;
+      height: 14px;
+    }
+
     .service-status {
       display: flex;
       align-items: center;
@@ -239,11 +287,165 @@
       font-size: 1rem;
       font-weight: 600;
       margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .incident-count {
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .incident-count.active {
+      background: var(--red-dim);
+      color: var(--red);
     }
 
     .no-incidents {
       color: var(--text-secondary);
       font-size: 0.9rem;
+    }
+
+    .incident-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .incident-item {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .incident-item.active {
+      border-color: var(--red);
+    }
+
+    .incident-item.resolved {
+      opacity: 0.7;
+    }
+
+    .incident-title-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      cursor: pointer;
+    }
+
+    .incident-title-bar:hover {
+      background: var(--bg-primary);
+    }
+
+    .incident-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .incident-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .incident-status-dot.major_outage { background: var(--red); }
+    .incident-status-dot.degraded { background: var(--yellow); }
+    .incident-status-dot.resolved { background: var(--green); }
+
+    .incident-time {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .incident-details {
+      padding: 16px;
+      display: none;
+    }
+
+    .incident-item.expanded .incident-details {
+      display: block;
+    }
+
+    .incident-meta {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .incident-updates {
+      border-left: 2px solid var(--border-color);
+      padding-left: 16px;
+      margin-left: 4px;
+    }
+
+    .incident-update {
+      position: relative;
+      padding-bottom: 12px;
+    }
+
+    .incident-update:last-child {
+      padding-bottom: 0;
+    }
+
+    .incident-update::before {
+      content: '';
+      position: absolute;
+      left: -21px;
+      top: 6px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--bg-secondary);
+      border: 2px solid var(--text-muted);
+    }
+
+    .incident-update.operational::before {
+      border-color: var(--green);
+      background: var(--green);
+    }
+
+    .incident-update.major_outage::before {
+      border-color: var(--red);
+      background: var(--red);
+    }
+
+    .incident-update.degraded::before {
+      border-color: var(--yellow);
+      background: var(--yellow);
+    }
+
+    .incident-update-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .incident-update-message {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .expand-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+
+    .incident-item.expanded .expand-icon {
+      transform: rotate(180deg);
     }
 
     footer {
@@ -313,6 +515,256 @@
       text-align: center;
     }
 
+    /* System Stats Styles */
+    .system-stats {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .system-stats-header {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .system-hostname {
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 2px 10px;
+      border-radius: 10px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .stat-value.good { color: var(--green); }
+    .stat-value.warning { color: var(--yellow); }
+    .stat-value.critical { color: var(--red); }
+
+    .stat-details {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .stat-bar {
+      height: 6px;
+      background: var(--bg-primary);
+      border-radius: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .stat-bar-fill.good { background: var(--green); }
+    .stat-bar-fill.warning { background: var(--yellow); }
+    .stat-bar-fill.critical { background: var(--red); }
+
+    .load-averages {
+      display: flex;
+      gap: 16px;
+      font-size: 0.85rem;
+    }
+
+    .load-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .load-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .load-value {
+      font-weight: 600;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .containers-section {
+      margin-top: 20px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
+    }
+
+    .containers-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .container-count {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }
+
+    .containers-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 8px;
+    }
+
+    .container-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .container-name {
+      font-family: 'SF Mono', Monaco, monospace;
+      color: var(--text-primary);
+      font-size: 0.8rem;
+    }
+
+    .container-stats {
+      display: flex;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    /* GPU Section Styles */
+    .gpu-section {
+      margin-top: 20px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
+    }
+
+    .gpu-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .gpu-count {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }
+
+    .gpu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .gpu-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .gpu-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .gpu-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+    }
+
+    .gpu-stat {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .gpu-stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .gpu-stat-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .gpu-stat-value.good { color: var(--green); }
+    .gpu-stat-value.warning { color: var(--yellow); }
+    .gpu-stat-value.critical { color: var(--red); }
+
+    .gpu-bar {
+      height: 4px;
+      background: var(--bg-primary);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .gpu-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .gpu-bar-fill.good { background: var(--green); }
+    .gpu-bar-fill.warning { background: var(--yellow); }
+    .gpu-bar-fill.critical { background: var(--red); }
+
     @media (max-width: 600px) {
       .service-item {
         flex-direction: column;
@@ -323,6 +775,14 @@
       .service-status {
         width: 100%;
         justify-content: space-between;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .containers-list {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -353,6 +813,58 @@
       </div>
     </div>
 
+    <div class="system-stats" id="system-stats">
+      <div class="system-stats-header">
+        <span>Server Resources</span>
+        <span class="system-hostname" id="system-hostname">Loading...</span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">CPU Usage</div>
+          <div class="stat-value" id="cpu-value">--%</div>
+          <div class="stat-details" id="cpu-details">-- cores</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="cpu-bar" style="width: 0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Memory</div>
+          <div class="stat-value" id="mem-value">--%</div>
+          <div class="stat-details" id="mem-details">-- / --</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="mem-bar" style="width: 0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Disk</div>
+          <div class="stat-value" id="disk-value">--%</div>
+          <div class="stat-details" id="disk-details">-- / --</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="disk-bar" style="width: 0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Uptime</div>
+          <div class="stat-value" id="uptime-value">--</div>
+          <div class="stat-details">
+            <div class="load-averages">
+              <div class="load-item"><span class="load-label">1m</span><span class="load-value" id="load-1m">--</span></div>
+              <div class="load-item"><span class="load-label">5m</span><span class="load-value" id="load-5m">--</span></div>
+              <div class="load-item"><span class="load-label">15m</span><span class="load-value" id="load-15m">--</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="gpu-section" id="gpu-section" style="display: none;">
+        <div class="gpu-header">
+          GPU
+          <span class="gpu-count" id="gpu-count">0</span>
+        </div>
+        <div class="gpu-list" id="gpu-list"></div>
+      </div>
+      <div class="containers-section" id="containers-section" style="display: none;">
+        <div class="containers-header">
+          Docker Containers
+          <span class="container-count" id="container-count">0</span>
+        </div>
+        <div class="containers-list" id="containers-list"></div>
+      </div>
+    </div>
+
     <div id="error-container"></div>
 
     <div id="services-container">
@@ -360,8 +872,13 @@
     </div>
 
     <div class="incident-history">
-      <div class="incident-header">Recent Incidents</div>
-      <div class="no-incidents">No incidents reported in the last 90 days.</div>
+      <div class="incident-header">
+        <span>Recent Incidents</span>
+        <span class="incident-count" id="incident-count">0</span>
+      </div>
+      <div id="incidents-container">
+        <div class="no-incidents">Loading incidents...</div>
+      </div>
     </div>
 
     <footer>
@@ -395,6 +912,145 @@
       return `${(ms / 1000).toFixed(2)}s`;
     }
 
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function getStatusClass(value, warning = 70, critical = 90) {
+      if (value >= critical) return 'critical';
+      if (value >= warning) return 'warning';
+      return 'good';
+    }
+
+    function renderSystemStats(stats) {
+      if (!stats) return;
+
+      // Hostname
+      document.getElementById('system-hostname').textContent =
+        `${stats.hostname} (${stats.platform}/${stats.arch})`;
+
+      // CPU
+      const cpuUsage = stats.cpu?.usage || 0;
+      const cpuClass = getStatusClass(cpuUsage);
+      document.getElementById('cpu-value').textContent = `${cpuUsage}%`;
+      document.getElementById('cpu-value').className = `stat-value ${cpuClass}`;
+      document.getElementById('cpu-details').textContent =
+        `${stats.cpu?.cores || 0} cores`;
+      document.getElementById('cpu-bar').style.width = `${cpuUsage}%`;
+      document.getElementById('cpu-bar').className = `stat-bar-fill ${cpuClass}`;
+
+      // Memory
+      const memUsage = stats.memory?.usage || 0;
+      const memClass = getStatusClass(memUsage);
+      document.getElementById('mem-value').textContent = `${memUsage}%`;
+      document.getElementById('mem-value').className = `stat-value ${memClass}`;
+      document.getElementById('mem-details').textContent =
+        `${formatBytes(stats.memory?.used || 0)} / ${formatBytes(stats.memory?.total || 0)}`;
+      document.getElementById('mem-bar').style.width = `${memUsage}%`;
+      document.getElementById('mem-bar').className = `stat-bar-fill ${memClass}`;
+
+      // Disk
+      const diskUsage = stats.disk?.usage || 0;
+      const diskClass = getStatusClass(diskUsage, 80, 95);
+      document.getElementById('disk-value').textContent = `${diskUsage}%`;
+      document.getElementById('disk-value').className = `stat-value ${diskClass}`;
+      document.getElementById('disk-details').textContent =
+        `${formatBytes(stats.disk?.used || 0)} / ${formatBytes(stats.disk?.total || 0)}`;
+      document.getElementById('disk-bar').style.width = `${diskUsage}%`;
+      document.getElementById('disk-bar').className = `stat-bar-fill ${diskClass}`;
+
+      // Uptime
+      document.getElementById('uptime-value').textContent = stats.uptimeFormatted || '--';
+      document.getElementById('uptime-value').className = 'stat-value good';
+
+      // Load averages
+      document.getElementById('load-1m').textContent = stats.loadAverage?.['1m'] || '--';
+      document.getElementById('load-5m').textContent = stats.loadAverage?.['5m'] || '--';
+      document.getElementById('load-15m').textContent = stats.loadAverage?.['15m'] || '--';
+
+      // GPU stats
+      const gpus = stats.gpu || [];
+      const gpuSection = document.getElementById('gpu-section');
+      const gpuList = document.getElementById('gpu-list');
+      const gpuCount = document.getElementById('gpu-count');
+
+      if (gpus.length > 0) {
+        gpuSection.style.display = 'block';
+        gpuCount.textContent = gpus.length;
+        gpuList.innerHTML = gpus.map(gpu => {
+          const usageClass = getStatusClass(gpu.usage);
+          const memClass = getStatusClass(gpu.memoryUsage);
+          const tempClass = gpu.temperature >= 85 ? 'critical' : (gpu.temperature >= 70 ? 'warning' : 'good');
+          return `
+            <div class="gpu-card">
+              <div class="gpu-name">${escapeHtml(gpu.name)}</div>
+              <div class="gpu-stats-grid">
+                <div class="gpu-stat">
+                  <span class="gpu-stat-label">GPU Usage</span>
+                  <span class="gpu-stat-value ${usageClass}">${gpu.usage}%</span>
+                  <div class="gpu-bar"><div class="gpu-bar-fill ${usageClass}" style="width: ${gpu.usage}%"></div></div>
+                </div>
+                <div class="gpu-stat">
+                  <span class="gpu-stat-label">VRAM</span>
+                  <span class="gpu-stat-value ${memClass}">${gpu.memoryUsage}%</span>
+                  <div class="gpu-bar"><div class="gpu-bar-fill ${memClass}" style="width: ${gpu.memoryUsage}%"></div></div>
+                </div>
+                <div class="gpu-stat">
+                  <span class="gpu-stat-label">Temperature</span>
+                  <span class="gpu-stat-value ${tempClass}">${gpu.temperature}°C</span>
+                </div>
+                <div class="gpu-stat">
+                  <span class="gpu-stat-label">Power</span>
+                  <span class="gpu-stat-value">${gpu.powerDraw.toFixed(0)}W</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        gpuSection.style.display = 'none';
+      }
+
+      // Docker containers
+      const containers = stats.containers || [];
+      const containersSection = document.getElementById('containers-section');
+      const containersList = document.getElementById('containers-list');
+      const containerCount = document.getElementById('container-count');
+
+      if (containers.length > 0) {
+        containersSection.style.display = 'block';
+        containerCount.textContent = containers.length;
+        containersList.innerHTML = containers.map(c => `
+          <div class="container-item">
+            <span class="container-name">${escapeHtml(c.name)}</span>
+            <div class="container-stats">
+              <span>CPU: ${c.cpu.toFixed(1)}%</span>
+              <span>MEM: ${c.memPercent.toFixed(1)}%</span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        containersSection.style.display = 'none';
+      }
+    }
+
+    async function fetchSystemStats() {
+      try {
+        const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
+        const response = await fetch(basePath + '/api/system');
+        if (response.ok) {
+          const stats = await response.json();
+          renderSystemStats(stats);
+        }
+      } catch (error) {
+        console.error('Failed to fetch system stats:', error);
+      }
+    }
+
     function formatTime(isoString) {
       const date = new Date(isoString);
       return date.toLocaleTimeString('en-US', {
@@ -402,6 +1058,78 @@
         minute: '2-digit',
         second: '2-digit'
       });
+    }
+
+    function getDiagnosis(service) {
+      const error = service.error || '';
+      const message = service.message || '';
+
+      // Analyze error patterns and provide helpful diagnosis
+      if (error.includes('ENOTFOUND') || error.includes('getaddrinfo')) {
+        return 'DNS resolution failed - the hostname cannot be resolved. Check if the service is running and DNS is configured correctly.';
+      }
+      if (error.includes('ECONNREFUSED')) {
+        return 'Connection refused - the service is not accepting connections. The server may be down or the port may be blocked.';
+      }
+      if (error.includes('ETIMEDOUT') || error.includes('timeout') || message.includes('timeout')) {
+        return 'Request timed out - the service is not responding in time. May indicate high load or network issues.';
+      }
+      if (error.includes('ECONNRESET')) {
+        return 'Connection reset - the server closed the connection unexpectedly. May indicate a crash or restart.';
+      }
+      if (error.includes('SSL') || error.includes('TLS') || error.includes('certificate') || error.includes('EPROTO')) {
+        return 'SSL/TLS error - there is a problem with the secure connection. Check certificate validity and configuration.';
+      }
+      if (error.includes('401') || error.includes('Unauthorized')) {
+        return 'Authentication failed - credentials may be invalid or expired.';
+      }
+      if (error.includes('403') || error.includes('Forbidden')) {
+        return 'Access denied - the service is rejecting requests. Check permissions and firewall rules.';
+      }
+      if (error.includes('404') || message.includes('404')) {
+        return 'Endpoint not found - the health check URL may be incorrect or the service is misconfigured.';
+      }
+      if (error.includes('500') || error.includes('502') || error.includes('503')) {
+        return 'Server error - the service encountered an internal error. Check server logs for details.';
+      }
+      if (message === 'Service unavailable') {
+        return 'The service health check returned an error response. The service may be starting up or experiencing issues.';
+      }
+
+      return null;
+    }
+
+    function renderErrorDetails(service) {
+      const diagnosis = getDiagnosis(service);
+      const errorClass = service.status === 'degraded' ? 'degraded' : '';
+      const iconColor = service.status === 'degraded' ? 'var(--yellow)' : 'var(--red)';
+
+      let html = `<div class="service-error ${errorClass}">`;
+      html += `<div class="service-error-header">
+        <svg class="service-error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        ${service.message || 'Unknown error'}
+      </div>`;
+
+      if (diagnosis) {
+        html += `<div class="service-error-message">${diagnosis}</div>`;
+      }
+
+      if (service.error) {
+        html += `<div class="service-error-details">${escapeHtml(service.error)}</div>`;
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     function renderServices(services) {
@@ -440,6 +1168,7 @@
                       }
                     </div>
                     <div class="service-description">${service.description}</div>
+                    ${service.status !== 'operational' ? renderErrorDetails(service) : ''}
                   </div>
                   <div class="service-status">
                     <div class="response-time">${formatResponseTime(service.responseTime)}</div>
@@ -475,6 +1204,100 @@
       document.getElementById('error-container').innerHTML = '';
     }
 
+    function formatDateTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function formatDuration(startDate, endDate) {
+      const start = new Date(startDate);
+      const end = endDate ? new Date(endDate) : new Date();
+      const diff = end - start;
+
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (days > 0) return `${days}d ${hours % 24}h`;
+      if (hours > 0) return `${hours}h ${minutes % 60}m`;
+      return `${minutes}m`;
+    }
+
+    function toggleIncident(element) {
+      element.closest('.incident-item').classList.toggle('expanded');
+    }
+
+    function renderIncidents(incidents) {
+      const container = document.getElementById('incidents-container');
+      const countEl = document.getElementById('incident-count');
+
+      const activeIncidents = incidents.filter(i => !i.resolvedAt);
+      const recentIncidents = incidents.slice(0, 10); // Show last 10
+
+      // Update count badge
+      if (activeIncidents.length > 0) {
+        countEl.textContent = `${activeIncidents.length} Active`;
+        countEl.classList.add('active');
+      } else {
+        countEl.textContent = incidents.length;
+        countEl.classList.remove('active');
+      }
+
+      if (recentIncidents.length === 0) {
+        container.innerHTML = '<div class="no-incidents">No incidents reported in the last 90 days.</div>';
+        return;
+      }
+
+      let html = '<div class="incident-list">';
+
+      recentIncidents.forEach(incident => {
+        const isResolved = !!incident.resolvedAt;
+        const statusClass = isResolved ? 'resolved' : 'active';
+        const dotClass = isResolved ? 'resolved' : incident.status;
+        const duration = formatDuration(incident.startedAt, incident.resolvedAt);
+
+        html += `
+          <div class="incident-item ${statusClass}">
+            <div class="incident-title-bar" onclick="toggleIncident(this)">
+              <div class="incident-title">
+                <span class="incident-status-dot ${dotClass}"></span>
+                ${escapeHtml(incident.title)}
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span class="incident-time">${formatDateTime(incident.startedAt)}</span>
+                <svg class="expand-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+            <div class="incident-details">
+              <div class="incident-meta">
+                <span>Service: ${escapeHtml(incident.serviceName)}</span>
+                <span>Duration: ${duration}</span>
+                <span>Status: ${isResolved ? 'Resolved' : (incident.status === 'major_outage' ? 'Major Outage' : 'Degraded')}</span>
+              </div>
+              <div class="incident-updates">
+                ${incident.updates.slice().reverse().map(update => `
+                  <div class="incident-update ${update.status}">
+                    <div class="incident-update-time">${formatDateTime(update.timestamp)}</div>
+                    <div class="incident-update-message">${escapeHtml(update.message)}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
     async function fetchStatus() {
       const btn = document.getElementById('refresh-btn');
       btn.disabled = true;
@@ -494,6 +1317,7 @@
         clearError();
         updateOverallStatus(data.overallStatus);
         renderServices(data.services);
+        renderIncidents(data.incidents || []);
 
         document.getElementById('last-updated').textContent =
           `Last updated: ${formatTime(data.timestamp)}`;
@@ -510,9 +1334,13 @@
 
     // Initial fetch
     fetchStatus();
+    fetchSystemStats();
 
     // Auto-refresh every 30 seconds
-    setInterval(fetchStatus, 30000);
+    setInterval(() => {
+      fetchStatus();
+      fetchSystemStats();
+    }, 30000);
   </script>
 </body>
 </html>

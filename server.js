@@ -2,20 +2,31 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const { execSync } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3004;
+const INCIDENTS_FILE = path.join(__dirname, 'data', 'incidents.json');
+const INCIDENTS_RETENTION_DAYS = 90;
 
 // Enable CORS for all routes
 app.use(cors());
 
-// Service definitions
+// Ensure data directory exists
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Service definitions - using public endpoints via CloudFront
 const services = [
   {
     id: 'portfolio',
     name: 'Terminal Portfolio',
     description: 'Interactive terminal-style portfolio website',
-    endpoint: 'http://portfolio-backend:3001/health',
+    endpoint: 'https://api.basedsecurity.net/portfolio/health',
     publicUrl: 'https://portfolio.basedsecurity.net',
     category: 'application'
   },
@@ -23,7 +34,7 @@ const services = [
     id: 'shipping',
     name: 'Shipping Monitor',
     description: 'Real-time package tracking dashboard',
-    endpoint: 'http://shipping-backend:3003/api/shipments',
+    endpoint: 'https://api.basedsecurity.net/shipping/api/health',
     publicUrl: 'https://shipping.basedsecurity.net',
     category: 'application'
   },
@@ -31,7 +42,7 @@ const services = [
     id: 'security',
     name: 'BasedSecurity AI',
     description: 'AI-powered security platform with license management',
-    endpoint: 'http://security-backend:8000/health',
+    endpoint: 'https://api.basedsecurity.net/security/health',
     publicUrl: 'https://security.basedsecurity.net',
     category: 'application'
   },
@@ -39,41 +50,15 @@ const services = [
     id: 'photos',
     name: 'RapidPhotoFlow',
     description: 'Photo management and AI tagging application',
-    endpoint: 'http://photos-backend:8080/actuator/health',
+    endpoint: 'https://api.basedsecurity.net/photos/actuator/health',
     publicUrl: 'https://photos.basedsecurity.net',
     category: 'application'
   },
   {
-    id: 'photos-ai',
-    name: 'Photos AI Service',
-    description: 'AI-powered image tagging microservice',
-    endpoint: 'http://photos-ai:3002/health',
-    publicUrl: null,
-    category: 'microservice'
-  },
-  {
-    id: 'postgres',
-    name: 'PostgreSQL Database',
-    description: 'Primary relational database',
-    endpoint: 'http://postgres:5432',
-    publicUrl: null,
-    category: 'infrastructure',
-    tcpCheck: true
-  },
-  {
-    id: 'redis',
-    name: 'Redis Cache',
-    description: 'In-memory data store for caching and sessions',
-    endpoint: 'http://redis:6379',
-    publicUrl: null,
-    category: 'infrastructure',
-    tcpCheck: true
-  },
-  {
-    id: 'nginx',
-    name: 'API Gateway',
-    description: 'Nginx reverse proxy and load balancer',
-    endpoint: 'http://nginx:80/health',
+    id: 'traefik',
+    name: 'API Gateway (Traefik)',
+    description: 'Reverse proxy and load balancer',
+    endpoint: 'https://api.basedsecurity.net/portfolio/health',
     publicUrl: 'https://api.basedsecurity.net',
     category: 'infrastructure'
   },
@@ -112,14 +97,103 @@ const services = [
   }
 ];
 
+// In-memory state tracking
+let previousStatuses = {};
+let incidents = [];
+
+// Load incidents from file
+function loadIncidents() {
+  try {
+    if (fs.existsSync(INCIDENTS_FILE)) {
+      const data = fs.readFileSync(INCIDENTS_FILE, 'utf8');
+      incidents = JSON.parse(data);
+      // Clean up old incidents
+      const cutoff = Date.now() - (INCIDENTS_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+      incidents = incidents.filter(i => new Date(i.startedAt).getTime() > cutoff);
+      console.log(`Loaded ${incidents.length} incidents from file`);
+    }
+  } catch (error) {
+    console.error('Error loading incidents:', error.message);
+    incidents = [];
+  }
+}
+
+// Save incidents to file
+function saveIncidents() {
+  try {
+    fs.writeFileSync(INCIDENTS_FILE, JSON.stringify(incidents, null, 2));
+  } catch (error) {
+    console.error('Error saving incidents:', error.message);
+  }
+}
+
+// Create a new incident
+function createIncident(service, status, message, error) {
+  const incident = {
+    id: `inc-${Date.now()}-${service.id}`,
+    serviceId: service.id,
+    serviceName: service.name,
+    status: status,
+    title: `${service.name} ${status === 'major_outage' ? 'Outage' : 'Degraded Performance'}`,
+    message: message,
+    error: error || null,
+    startedAt: new Date().toISOString(),
+    resolvedAt: null,
+    updates: [
+      {
+        timestamp: new Date().toISOString(),
+        status: status,
+        message: `${service.name} is experiencing ${status === 'major_outage' ? 'an outage' : 'degraded performance'}. ${message}`
+      }
+    ]
+  };
+
+  incidents.unshift(incident);
+  saveIncidents();
+  console.log(`Created incident: ${incident.title}`);
+  return incident;
+}
+
+// Resolve an incident
+function resolveIncident(serviceId) {
+  const activeIncident = incidents.find(i => i.serviceId === serviceId && !i.resolvedAt);
+  if (activeIncident) {
+    activeIncident.resolvedAt = new Date().toISOString();
+    activeIncident.updates.push({
+      timestamp: new Date().toISOString(),
+      status: 'operational',
+      message: `${activeIncident.serviceName} has recovered and is now operational.`
+    });
+    saveIncidents();
+    console.log(`Resolved incident: ${activeIncident.title}`);
+  }
+}
+
+// Update an existing incident (status change within incident)
+function updateIncident(serviceId, newStatus, message) {
+  const activeIncident = incidents.find(i => i.serviceId === serviceId && !i.resolvedAt);
+  if (activeIncident && activeIncident.status !== newStatus) {
+    activeIncident.status = newStatus;
+    activeIncident.updates.push({
+      timestamp: new Date().toISOString(),
+      status: newStatus,
+      message: `Status changed to ${newStatus === 'major_outage' ? 'Major Outage' : 'Degraded'}. ${message}`
+    });
+    saveIncidents();
+  }
+}
+
+// Check if service has an active incident
+function hasActiveIncident(serviceId) {
+  return incidents.some(i => i.serviceId === serviceId && !i.resolvedAt);
+}
+
 // Check a single service health
 async function checkService(service) {
   const startTime = Date.now();
 
   try {
     if (service.tcpCheck) {
-      // For TCP services like postgres/redis, we check via Docker network
-      // Since we can't do raw TCP in Node easily, we'll rely on Docker health checks
       return {
         ...service,
         status: 'operational',
@@ -200,9 +274,188 @@ async function checkService(service) {
   }
 }
 
-// Check all services
+// Get CPU usage percentage
+function getCpuUsage() {
+  const cpus = os.cpus();
+  let totalIdle = 0;
+  let totalTick = 0;
+
+  cpus.forEach(cpu => {
+    for (const type in cpu.times) {
+      totalTick += cpu.times[type];
+    }
+    totalIdle += cpu.times.idle;
+  });
+
+  const idle = totalIdle / cpus.length;
+  const total = totalTick / cpus.length;
+  const usage = 100 - (idle / total * 100);
+
+  return {
+    usage: Math.round(usage * 10) / 10,
+    cores: cpus.length,
+    model: cpus[0]?.model || 'Unknown'
+  };
+}
+
+// Get memory usage
+function getMemoryUsage() {
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const usedMem = totalMem - freeMem;
+  const usagePercent = (usedMem / totalMem) * 100;
+
+  return {
+    total: totalMem,
+    used: usedMem,
+    free: freeMem,
+    usage: Math.round(usagePercent * 10) / 10
+  };
+}
+
+// Get disk usage (Linux)
+function getDiskUsage() {
+  try {
+    // Use df command for disk usage
+    const output = execSync('df -B1 / 2>/dev/null || df -k / 2>/dev/null', { encoding: 'utf8' });
+    const lines = output.trim().split('\n');
+    if (lines.length >= 2) {
+      const parts = lines[1].split(/\s+/);
+      // df -B1 format: Filesystem 1B-blocks Used Available Use% Mounted
+      // df -k format: Filesystem 1K-blocks Used Available Use% Mounted
+      const multiplier = output.includes('1B-blocks') ? 1 : 1024;
+      const total = parseInt(parts[1]) * multiplier;
+      const used = parseInt(parts[2]) * multiplier;
+      const available = parseInt(parts[3]) * multiplier;
+      const usagePercent = (used / total) * 100;
+
+      return {
+        total,
+        used,
+        available,
+        usage: Math.round(usagePercent * 10) / 10
+      };
+    }
+  } catch (error) {
+    console.error('Error getting disk usage:', error.message);
+  }
+
+  return {
+    total: 0,
+    used: 0,
+    available: 0,
+    usage: 0
+  };
+}
+
+// Get Docker container stats
+function getDockerStats() {
+  try {
+    const output = execSync('docker stats --no-stream --format "{{.Name}},{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}}" 2>/dev/null', { encoding: 'utf8' });
+    const containers = output.trim().split('\n').filter(line => line).map(line => {
+      const [name, cpu, memUsage, memPerc] = line.split(',');
+      return {
+        name,
+        cpu: parseFloat(cpu) || 0,
+        memUsage: memUsage || '0B / 0B',
+        memPercent: parseFloat(memPerc) || 0
+      };
+    });
+    return containers;
+  } catch (error) {
+    return [];
+  }
+}
+
+// Get GPU usage (NVIDIA)
+function getGpuUsage() {
+  try {
+    // Try nvidia-smi for NVIDIA GPUs
+    const output = execSync('nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits 2>/dev/null', { encoding: 'utf8' });
+    const gpus = output.trim().split('\n').filter(line => line).map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      const memUsed = parseInt(parts[3]) || 0;
+      const memTotal = parseInt(parts[4]) || 1;
+      return {
+        index: parseInt(parts[0]) || 0,
+        name: parts[1] || 'Unknown GPU',
+        usage: parseFloat(parts[2]) || 0,
+        memoryUsed: memUsed * 1024 * 1024, // Convert MB to bytes
+        memoryTotal: memTotal * 1024 * 1024,
+        memoryUsage: Math.round((memUsed / memTotal) * 100 * 10) / 10,
+        temperature: parseInt(parts[5]) || 0,
+        powerDraw: parseFloat(parts[6]) || 0
+      };
+    });
+    return gpus;
+  } catch (error) {
+    // nvidia-smi not available or no NVIDIA GPU
+    return [];
+  }
+}
+
+// Get system stats
+function getSystemStats() {
+  const uptime = os.uptime();
+  const loadAvg = os.loadavg();
+
+  return {
+    hostname: os.hostname(),
+    platform: os.platform(),
+    arch: os.arch(),
+    uptime: uptime,
+    uptimeFormatted: formatUptime(uptime),
+    loadAverage: {
+      '1m': Math.round(loadAvg[0] * 100) / 100,
+      '5m': Math.round(loadAvg[1] * 100) / 100,
+      '15m': Math.round(loadAvg[2] * 100) / 100
+    },
+    cpu: getCpuUsage(),
+    memory: getMemoryUsage(),
+    disk: getDiskUsage(),
+    gpu: getGpuUsage(),
+    containers: getDockerStats(),
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Format uptime to human readable
+function formatUptime(seconds) {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+// Check all services and track incidents
 async function checkAllServices() {
   const results = await Promise.all(services.map(checkService));
+
+  // Track state changes and manage incidents
+  results.forEach(result => {
+    const prevStatus = previousStatuses[result.id];
+    const currentStatus = result.status;
+
+    if (prevStatus !== currentStatus) {
+      if (currentStatus === 'operational' && prevStatus && prevStatus !== 'operational') {
+        // Service recovered - resolve incident
+        resolveIncident(result.id);
+      } else if (currentStatus !== 'operational') {
+        if (hasActiveIncident(result.id)) {
+          // Update existing incident if status changed (degraded <-> major_outage)
+          updateIncident(result.id, currentStatus, result.message);
+        } else {
+          // Create new incident
+          createIncident(result, currentStatus, result.message, result.error);
+        }
+      }
+    }
+
+    previousStatuses[result.id] = currentStatus;
+  });
 
   // Calculate overall status
   const statuses = results.map(r => r.status);
@@ -217,7 +470,8 @@ async function checkAllServices() {
   return {
     overallStatus,
     timestamp: new Date().toISOString(),
-    services: results
+    services: results,
+    incidents: incidents.slice(0, 20) // Return last 20 incidents
   };
 }
 
@@ -248,9 +502,60 @@ async function handleStatusRequest(req, res) {
 app.get('/api/status', handleStatusRequest);
 app.get('/status/api/status', handleStatusRequest);
 
+// Incidents API endpoint
+app.get('/api/incidents', (req, res) => {
+  res.json({ incidents: incidents.slice(0, 50) });
+});
+app.get('/status/api/incidents', (req, res) => {
+  res.json({ incidents: incidents.slice(0, 50) });
+});
+
+// System stats API endpoint
+app.get('/api/system', (req, res) => {
+  try {
+    const stats = getSystemStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to get system stats',
+      message: error.message
+    });
+  }
+});
+app.get('/status/api/system', (req, res) => {
+  try {
+    const stats = getSystemStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to get system stats',
+      message: error.message
+    });
+  }
+});
+
 // Serve index.html for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Initialize
+loadIncidents();
+
+// Background health check every 60 seconds to track incidents even when no one is viewing
+setInterval(async () => {
+  try {
+    await checkAllServices();
+  } catch (error) {
+    console.error('Background health check failed:', error.message);
+  }
+}, 60000);
+
+// Initial check on startup
+checkAllServices().then(() => {
+  console.log('Initial health check completed');
+}).catch(err => {
+  console.error('Initial health check failed:', err.message);
 });
 
 app.listen(PORT, () => {
