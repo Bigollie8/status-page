@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Audit | basedsecurity.net</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F50D;</text></svg>">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-tertiary: #1a1a1a;
+      --text-primary: #ffffff;
+      --text-secondary: #888888;
+      --text-muted: #555555;
+      --border-color: #222222;
+      --green: #00d26a;
+      --green-dim: rgba(0, 210, 106, 0.1);
+      --yellow: #ffc107;
+      --yellow-dim: rgba(255, 193, 7, 0.1);
+      --red: #ff4757;
+      --red-dim: rgba(255, 71, 87, 0.1);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59, 130, 246, 0.1);
+      --purple: #a855f7;
+      --purple-dim: rgba(168, 85, 247, 0.1);
+      --orange: #f97316;
+      --orange-dim: rgba(249, 115, 22, 0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span { color: var(--green); }
+
+    header p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .nav-links {
+      margin-top: 16px;
+    }
+
+    .nav-links a {
+      color: var(--blue);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+
+    /* Status Summary Card */
+    .bottleneck-summary {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .summary-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .summary-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .summary-time {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .bottleneck-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .bottleneck-item {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+
+    .bottleneck-item.critical {
+      border-color: var(--red);
+      background: var(--red-dim);
+    }
+
+    .bottleneck-item.warning {
+      border-color: var(--yellow);
+      background: var(--yellow-dim);
+    }
+
+    .bottleneck-item.ok {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+
+    .bottleneck-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .bottleneck-status {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .bottleneck-item.critical .bottleneck-status { color: var(--red); }
+    .bottleneck-item.warning .bottleneck-status { color: var(--yellow); }
+    .bottleneck-item.ok .bottleneck-status { color: var(--green); }
+
+    /* Alerts Section */
+    .alerts-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .section-header {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .alert-count {
+      font-size: 0.75rem;
+      padding: 2px 10px;
+      border-radius: 10px;
+      background: var(--red-dim);
+      color: var(--red);
+    }
+
+    .alert-count.none {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .alert-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .alert-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      border-left: 3px solid var(--red);
+    }
+
+    .alert-item.warning { border-left-color: var(--yellow); }
+    .alert-item.critical { border-left-color: var(--red); }
+
+    .alert-icon {
+      font-size: 1.2rem;
+    }
+
+    .alert-content {
+      flex: 1;
+    }
+
+    .alert-type {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .alert-message {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .alert-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .no-alerts {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      padding: 12px;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .metric-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .metric-value-large {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .metric-value-large.good { color: var(--green); }
+    .metric-value-large.warning { color: var(--yellow); }
+    .metric-value-large.critical { color: var(--red); }
+
+    .metric-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    /* CPU Breakdown */
+    .cpu-breakdown {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .cpu-type {
+      text-align: center;
+      padding: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+    }
+
+    .cpu-type-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .cpu-type-value {
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .cpu-type-value.user { color: var(--green); }
+    .cpu-type-value.system { color: var(--blue); }
+    .cpu-type-value.iowait { color: var(--orange); }
+    .cpu-type-value.steal { color: var(--purple); }
+
+    /* Per-Core Grid */
+    .cores-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 8px;
+    }
+
+    .core-item {
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .core-id {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .core-value {
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .core-value.good { color: var(--green); }
+    .core-value.warning { color: var(--yellow); }
+    .core-value.critical { color: var(--red); }
+
+    .core-bar {
+      height: 3px;
+      background: var(--bg-primary);
+      border-radius: 2px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .core-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    .core-bar-fill.good { background: var(--green); }
+    .core-bar-fill.warning { background: var(--yellow); }
+    .core-bar-fill.critical { background: var(--red); }
+
+    /* Memory Pressure */
+    .memory-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .mem-stat {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .mem-stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .mem-stat-value {
+      font-size: 1.2rem;
+      font-weight: 600;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    /* Disk I/O */
+    .disk-io-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .disk-io-item {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .disk-io-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .disk-io-name {
+      font-weight: 600;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .disk-io-util {
+      font-weight: 700;
+    }
+
+    .disk-io-util.good { color: var(--green); }
+    .disk-io-util.warning { color: var(--yellow); }
+    .disk-io-util.critical { color: var(--red); }
+
+    .disk-io-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+
+    .disk-stat {
+      text-align: center;
+    }
+
+    .disk-stat-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .disk-stat-value {
+      font-family: 'SF Mono', Monaco, monospace;
+      color: var(--text-secondary);
+    }
+
+    /* Top Processes */
+    .processes-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .processes-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .processes-table td {
+      padding: 8px;
+      font-size: 0.85rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .processes-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .process-command {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.8rem;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .process-cpu, .process-mem {
+      font-family: 'SF Mono', Monaco, monospace;
+      text-align: right;
+    }
+
+    /* Temperature */
+    .temp-display {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .temp-value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .temp-value.good { color: var(--green); }
+    .temp-value.warning { color: var(--yellow); }
+    .temp-value.critical { color: var(--red); }
+
+    .temp-bar {
+      flex: 1;
+      height: 12px;
+      background: linear-gradient(to right, var(--green), var(--yellow), var(--red));
+      border-radius: 6px;
+      position: relative;
+    }
+
+    .temp-marker {
+      position: absolute;
+      width: 4px;
+      height: 20px;
+      background: white;
+      border-radius: 2px;
+      top: -4px;
+      transform: translateX(-50%);
+    }
+
+    /* Kernel Stats */
+    .kernel-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .kernel-stat {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .kernel-stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .kernel-stat-value {
+      font-size: 1.3rem;
+      font-weight: 600;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    /* Refresh Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .refresh-btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .refresh-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--text-muted);
+    }
+
+    .refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .refresh-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .refresh-btn.loading svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .auto-refresh input {
+      accent-color: var(--green);
+    }
+
+    /* Error State */
+    .error-state {
+      background: var(--red-dim);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      color: var(--red);
+    }
+
+    .loading-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--text-secondary);
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    footer a:hover { color: var(--text-primary); }
+
+    @media (max-width: 768px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .bottleneck-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .cpu-breakdown {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">based<span>security</span>.net</div>
+      <p>Home Server System Audit</p>
+      <div class="nav-links">
+        <a href="index.html">&larr; Back to Status Page</a>
+      </div>
+    </header>
+
+    <div class="controls">
+      <button class="refresh-btn" id="refresh-btn" onclick="fetchAuditData()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2v6h-6"></path>
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+          <path d="M3 22v-6h6"></path>
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+        </svg>
+        Refresh Data
+      </button>
+      <div class="auto-refresh">
+        <input type="checkbox" id="auto-refresh" checked>
+        <label for="auto-refresh">Auto-refresh (10s)</label>
+      </div>
+    </div>
+
+    <div id="content">
+      <div class="loading-state">Loading audit data...</div>
+    </div>
+
+    <footer>
+      <p>Powered by <a href="https://portfolio.basedsecurity.net" target="_blank">basedsecurity.net</a></p>
+    </footer>
+  </div>
+
+  <script>
+    let autoRefreshInterval = null;
+
+    function getStatusClass(value, warning = 70, critical = 90) {
+      if (value >= critical) return 'critical';
+      if (value >= warning) return 'warning';
+      return 'good';
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function formatNumber(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+      return n.toFixed(0);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTime(ts) {
+      return new Date(ts).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    function renderBottleneckSummary(data) {
+      const summary = data.bottlenecks || [];
+      const checks = {
+        'CPU Core Saturation': { status: 'ok', label: 'OK' },
+        'I/O Wait': { status: 'ok', label: 'OK' },
+        'Memory Pressure': { status: 'ok', label: 'OK' },
+        'Thermal': { status: 'ok', label: 'OK' },
+        'Disk Latency': { status: 'ok', label: 'OK' },
+        'Swap Usage': { status: 'ok', label: 'OK' }
+      };
+
+      summary.forEach(b => {
+        if (b.type === 'cpu_core_saturation') {
+          checks['CPU Core Saturation'] = { status: b.severity, label: b.severity === 'critical' ? 'SATURATED' : 'HIGH' };
+        } else if (b.type === 'high_iowait') {
+          checks['I/O Wait'] = { status: b.severity, label: b.severity === 'critical' ? 'HIGH' : 'ELEVATED' };
+        } else if (b.type === 'memory_pressure') {
+          checks['Memory Pressure'] = { status: b.severity, label: b.severity === 'critical' ? 'CRITICAL' : 'ELEVATED' };
+        } else if (b.type === 'thermal_throttle') {
+          checks['Thermal'] = { status: b.severity, label: 'THROTTLING' };
+        } else if (b.type === 'disk_latency') {
+          checks['Disk Latency'] = { status: b.severity, label: 'SLOW' };
+        } else if (b.type === 'swap_pressure') {
+          checks['Swap Usage'] = { status: b.severity, label: b.severity === 'critical' ? 'HEAVY' : 'ELEVATED' };
+        }
+      });
+
+      return `
+        <div class="bottleneck-summary">
+          <div class="summary-header">
+            <span class="summary-title">Bottleneck Analysis</span>
+            <span class="summary-time">Updated: ${formatTime(data.timestamp || Date.now())}</span>
+          </div>
+          <div class="bottleneck-grid">
+            ${Object.entries(checks).map(([name, {status, label}]) => `
+              <div class="bottleneck-item ${status}">
+                <div class="bottleneck-label">${name}</div>
+                <div class="bottleneck-status">${label}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAlerts(alerts) {
+      const active = alerts.active || [];
+      const count = active.length;
+
+      return `
+        <div class="alerts-section">
+          <div class="section-header">
+            Active Alerts
+            <span class="alert-count ${count === 0 ? 'none' : ''}">${count === 0 ? 'None' : count}</span>
+          </div>
+          ${count === 0
+            ? '<div class="no-alerts">No active alerts. System is healthy.</div>'
+            : `<div class="alert-list">
+                ${active.map(alert => `
+                  <div class="alert-item ${alert.severity}">
+                    <span class="alert-icon">${alert.severity === 'critical' ? '&#9888;' : '&#9888;'}</span>
+                    <div class="alert-content">
+                      <div class="alert-type">${escapeHtml(alert.type.replace(/_/g, ' ').toUpperCase())}</div>
+                      <div class="alert-message">${escapeHtml(alert.message)}</div>
+                    </div>
+                    <div class="alert-time">${formatTime(alert.timestamp)}</div>
+                  </div>
+                `).join('')}
+              </div>`
+          }
+        </div>
+      `;
+    }
+
+    function renderCpuMetrics(data) {
+      const cpu = data.cpu || {};
+      const perCore = cpu.perCore || [];
+      const ext = cpu.extended || {};
+      const temp = cpu.temperature || {};
+
+      const overallUsage = cpu.usage || 0;
+      const usageClass = getStatusClass(overallUsage);
+
+      // Find hottest core
+      let maxCore = { core: 0, usage: 0 };
+      perCore.forEach(c => {
+        if (c.usage > maxCore.usage) maxCore = c;
+      });
+
+      return `
+        <div class="metric-card">
+          <div class="metric-header">
+            <span>CPU Overview</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">${cpu.cores || perCore.length} threads</span>
+          </div>
+          <div class="metric-value-large ${usageClass}">${overallUsage.toFixed(1)}%</div>
+          <div class="metric-subtitle">
+            ${cpu.model || 'Unknown CPU'}
+          </div>
+          <div class="cpu-breakdown">
+            <div class="cpu-type">
+              <div class="cpu-type-label">User</div>
+              <div class="cpu-type-value user">${(ext.user || 0).toFixed(1)}%</div>
+            </div>
+            <div class="cpu-type">
+              <div class="cpu-type-label">System</div>
+              <div class="cpu-type-value system">${(ext.system || 0).toFixed(1)}%</div>
+            </div>
+            <div class="cpu-type">
+              <div class="cpu-type-label">I/O Wait</div>
+              <div class="cpu-type-value iowait">${(ext.iowait || 0).toFixed(1)}%</div>
+            </div>
+            <div class="cpu-type">
+              <div class="cpu-type-label">Steal</div>
+              <div class="cpu-type-value steal">${(ext.steal || 0).toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span>Per-Core CPU Usage</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">
+              Hottest: Core ${maxCore.core} (${maxCore.usage.toFixed(0)}%)
+            </span>
+          </div>
+          <div class="cores-grid">
+            ${perCore.map(core => {
+              const cClass = getStatusClass(core.usage);
+              return `
+                <div class="core-item">
+                  <div class="core-id">Core ${core.core}</div>
+                  <div class="core-value ${cClass}">${core.usage.toFixed(0)}%</div>
+                  <div class="core-bar"><div class="core-bar-fill ${cClass}" style="width: ${core.usage}%"></div></div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        ${temp.celsius !== undefined ? `
+          <div class="metric-card">
+            <div class="metric-header">CPU Temperature</div>
+            <div class="temp-display">
+              <div class="temp-value ${getStatusClass(temp.celsius, 70, 85)}">${temp.celsius.toFixed(0)}°C</div>
+              <div class="temp-bar">
+                <div class="temp-marker" style="left: ${Math.min(100, (temp.celsius / 100) * 100)}%"></div>
+              </div>
+            </div>
+            <div class="metric-subtitle" style="margin-top: 12px;">
+              ${temp.celsius >= 85 ? 'WARNING: Thermal throttling may occur!' :
+                temp.celsius >= 70 ? 'Temperature elevated but within acceptable range.' :
+                'Temperature normal.'}
+            </div>
+          </div>
+        ` : ''}
+      `;
+    }
+
+    function renderMemoryMetrics(data) {
+      const mem = data.memory || {};
+      const pressure = mem.pressure || {};
+
+      const usage = mem.usage || 0;
+      const usageClass = getStatusClass(usage, 80, 95);
+
+      return `
+        <div class="metric-card">
+          <div class="metric-header">Memory</div>
+          <div class="metric-value-large ${usageClass}">${usage.toFixed(1)}%</div>
+          <div class="metric-subtitle">
+            ${formatBytes(mem.used || 0)} / ${formatBytes(mem.total || 0)}
+          </div>
+          <div class="memory-stats">
+            <div class="mem-stat">
+              <div class="mem-stat-label">Available</div>
+              <div class="mem-stat-value">${formatBytes(pressure.available || mem.free || 0)}</div>
+            </div>
+            <div class="mem-stat">
+              <div class="mem-stat-label">Buffers/Cache</div>
+              <div class="mem-stat-value">${formatBytes(pressure.cached || 0)}</div>
+            </div>
+            <div class="mem-stat">
+              <div class="mem-stat-label">Swap Used</div>
+              <div class="mem-stat-value ${getStatusClass(pressure.swapUsage || 0, 30, 60)}">${(pressure.swapUsage || 0).toFixed(1)}%</div>
+            </div>
+            <div class="mem-stat">
+              <div class="mem-stat-label">Swap</div>
+              <div class="mem-stat-value">${formatBytes(pressure.swapUsed || 0)} / ${formatBytes(pressure.swapTotal || 0)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDiskIo(data) {
+      const diskIo = data.diskIo || [];
+
+      if (diskIo.length === 0) {
+        return `
+          <div class="metric-card">
+            <div class="metric-header">Disk I/O</div>
+            <div class="no-alerts">No disk I/O data available.</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="metric-card">
+          <div class="metric-header">Disk I/O</div>
+          <div class="disk-io-list">
+            ${diskIo.map(disk => {
+              const utilClass = getStatusClass(disk.utilization || 0, 70, 90);
+              return `
+                <div class="disk-io-item">
+                  <div class="disk-io-header">
+                    <span class="disk-io-name">${escapeHtml(disk.device)}</span>
+                    <span class="disk-io-util ${utilClass}">${(disk.utilization || 0).toFixed(1)}% util</span>
+                  </div>
+                  <div class="disk-io-stats">
+                    <div class="disk-stat">
+                      <div class="disk-stat-label">Read IOPS</div>
+                      <div class="disk-stat-value">${formatNumber(disk.readIops || 0)}</div>
+                    </div>
+                    <div class="disk-stat">
+                      <div class="disk-stat-label">Write IOPS</div>
+                      <div class="disk-stat-value">${formatNumber(disk.writeIops || 0)}</div>
+                    </div>
+                    <div class="disk-stat">
+                      <div class="disk-stat-label">Latency</div>
+                      <div class="disk-stat-value">${(disk.avgLatencyMs || 0).toFixed(1)}ms</div>
+                    </div>
+                    <div class="disk-stat">
+                      <div class="disk-stat-label">Queue</div>
+                      <div class="disk-stat-value">${(disk.queueDepth || 0).toFixed(1)}</div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderProcesses(data) {
+      const processes = data.processes || [];
+
+      if (processes.length === 0) {
+        return `
+          <div class="metric-card">
+            <div class="metric-header">Top Processes</div>
+            <div class="no-alerts">No process data available.</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="metric-card">
+          <div class="metric-header">Top Processes (by CPU)</div>
+          <table class="processes-table">
+            <thead>
+              <tr>
+                <th>PID</th>
+                <th>User</th>
+                <th>Command</th>
+                <th style="text-align: right;">CPU %</th>
+                <th style="text-align: right;">MEM %</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${processes.slice(0, 10).map(p => `
+                <tr>
+                  <td style="font-family: monospace; color: var(--text-muted);">${p.pid}</td>
+                  <td style="color: var(--text-secondary);">${escapeHtml(p.user || '-')}</td>
+                  <td class="process-command" title="${escapeHtml(p.command)}">${escapeHtml(p.command)}</td>
+                  <td class="process-cpu" style="color: ${getStatusClass(p.cpu) === 'critical' ? 'var(--red)' : getStatusClass(p.cpu) === 'warning' ? 'var(--yellow)' : 'var(--text-primary)'};">${p.cpu.toFixed(1)}%</td>
+                  <td class="process-mem">${p.memory.toFixed(1)}%</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderKernelStats(data) {
+      const kernel = data.kernel || {};
+
+      return `
+        <div class="metric-card">
+          <div class="metric-header">Kernel Statistics</div>
+          <div class="kernel-stats">
+            <div class="kernel-stat">
+              <div class="kernel-stat-label">Context Switches/s</div>
+              <div class="kernel-stat-value">${formatNumber(kernel.contextSwitchRate || 0)}</div>
+            </div>
+            <div class="kernel-stat">
+              <div class="kernel-stat-label">Interrupts/s</div>
+              <div class="kernel-stat-value">${formatNumber(kernel.interruptRate || 0)}</div>
+            </div>
+            <div class="kernel-stat">
+              <div class="kernel-stat-label">Procs Running</div>
+              <div class="kernel-stat-value">${kernel.procsRunning || 0}</div>
+            </div>
+            <div class="kernel-stat">
+              <div class="kernel-stat-label">Procs Blocked</div>
+              <div class="kernel-stat-value ${(kernel.procsBlocked || 0) > 0 ? 'warning' : ''}">${kernel.procsBlocked || 0}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderAuditData(data, alerts) {
+      const content = document.getElementById('content');
+
+      content.innerHTML = `
+        ${renderBottleneckSummary(data)}
+        ${renderAlerts(alerts)}
+        <div class="metrics-grid">
+          ${renderCpuMetrics(data)}
+          ${renderMemoryMetrics(data)}
+          ${renderDiskIo(data)}
+          ${renderProcesses(data)}
+          ${renderKernelStats(data)}
+        </div>
+      `;
+    }
+
+    function renderError(message) {
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div class="error-state">
+          <h3>Failed to load audit data</h3>
+          <p>${escapeHtml(message)}</p>
+          <p style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">
+            Make sure the home server agent is running and accessible.
+          </p>
+        </div>
+      `;
+    }
+
+    async function fetchAuditData() {
+      const btn = document.getElementById('refresh-btn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+
+      try {
+        const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
+
+        // Fetch both audit data and alerts in parallel
+        const [auditRes, alertsRes] = await Promise.all([
+          fetch(basePath + '/api/home/audit'),
+          fetch(basePath + '/api/home/alerts')
+        ]);
+
+        if (!auditRes.ok) {
+          throw new Error(`Audit API returned ${auditRes.status}`);
+        }
+
+        const auditData = await auditRes.json();
+        const alertsData = alertsRes.ok ? await alertsRes.json() : { active: [], recent: [] };
+
+        renderAuditData(auditData, alertsData);
+
+      } catch (error) {
+        console.error('Failed to fetch audit data:', error);
+        renderError(error.message);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    }
+
+    // Auto-refresh toggle
+    document.getElementById('auto-refresh').addEventListener('change', function() {
+      if (this.checked) {
+        autoRefreshInterval = setInterval(fetchAuditData, 10000);
+      } else {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
+    });
+
+    // Initial fetch
+    fetchAuditData();
+
+    // Start auto-refresh
+    autoRefreshInterval = setInterval(fetchAuditData, 10000);
+  </script>
+</body>
+</html>

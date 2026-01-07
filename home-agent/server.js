@@ -2,12 +2,24 @@ const express = require('express');
 const cors = require('cors');
 const os = require('os');
 const { execSync } = require('child_process');
+const metrics = require('./metrics');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
 const API_KEY = process.env.API_KEY || 'home-stats-key';
 
+// Collection intervals
+const METRICS_INTERVAL = 10000;  // 10 seconds for detailed metrics
+const PROCESS_INTERVAL = 60000; // 60 seconds for top processes
+const CLEANUP_INTERVAL = 3600000; // 1 hour for cleanup/aggregation
+
 app.use(cors());
+app.use(express.json());
+
+// Initialize metrics and database
+metrics.initialize();
+db.initialize();
 
 // Simple API key auth middleware
 function authenticate(req, res, next) {
@@ -19,7 +31,7 @@ function authenticate(req, res, next) {
   }
 }
 
-// Get CPU usage percentage
+// Get CPU usage percentage (legacy - kept for compatibility)
 function getCpuUsage() {
   const cpus = os.cpus();
   let totalIdle = 0;
@@ -197,7 +209,7 @@ function formatUptime(seconds) {
   return `${minutes}m`;
 }
 
-// Get all system stats
+// Get all system stats (legacy format for compatibility)
 function getSystemStats() {
   const uptime = os.uptime();
   const loadAvg = os.loadavg();
@@ -225,25 +237,232 @@ function getSystemStats() {
   };
 }
 
+// Get detailed system stats with enhanced metrics
+function getDetailedStats() {
+  const basicStats = getSystemStats();
+  const detailedMetrics = metrics.getDetailedMetrics();
+
+  return {
+    ...basicStats,
+    cpu: {
+      ...basicStats.cpu,
+      perCore: detailedMetrics.perCoreCpu,
+      extended: detailedMetrics.cpuExtended,
+      temperature: detailedMetrics.cpuTemperature
+    },
+    memory: {
+      ...basicStats.memory,
+      pressure: detailedMetrics.memoryPressure
+    },
+    diskIo: detailedMetrics.diskIo,
+    processes: detailedMetrics.topProcesses,
+    kernel: detailedMetrics.kernelStats,
+    bottlenecks: detailedMetrics.bottlenecks
+  };
+}
+
+// Background metrics collection
+let lastProcessCollection = 0;
+
+function collectMetrics() {
+  try {
+    const detailedMetrics = metrics.getDetailedMetrics();
+    const basicStats = getSystemStats();
+
+    // Merge for storage
+    const fullMetrics = {
+      ...detailedMetrics,
+      memory: basicStats.memory,
+      loadAverage: basicStats.loadAverage
+    };
+
+    // Store metrics
+    db.insertMetrics(fullMetrics);
+
+    // Store processes less frequently
+    const now = Date.now();
+    if (now - lastProcessCollection >= PROCESS_INTERVAL) {
+      db.insertTopProcesses(detailedMetrics.topProcesses);
+      lastProcessCollection = now;
+    }
+
+    // Handle alerts
+    for (const bottleneck of detailedMetrics.bottlenecks) {
+      db.insertAlert(bottleneck);
+    }
+    db.autoResolveAlerts(detailedMetrics.bottlenecks);
+
+  } catch (error) {
+    console.error('Error collecting metrics:', error.message);
+  }
+}
+
+function runCleanup() {
+  try {
+    db.aggregateHourly();
+    db.cleanup();
+    console.log('Cleanup completed. DB stats:', db.getDbStats());
+  } catch (error) {
+    console.error('Error during cleanup:', error.message);
+  }
+}
+
+// Start background collection
+setInterval(collectMetrics, METRICS_INTERVAL);
+setInterval(runCleanup, CLEANUP_INTERVAL);
+
+// Initial collection after short delay
+setTimeout(collectMetrics, 2000);
+
+// ============ ENDPOINTS ============
+
 // Health check (no auth required)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'home-stats-agent' });
+  res.json({ status: 'ok', service: 'home-stats-agent', version: '2.0.0' });
 });
 
-// Stats endpoint (requires auth)
+// Stats endpoint - legacy format (requires auth)
 app.get('/stats', authenticate, (req, res) => {
   try {
     const stats = getSystemStats();
     res.json(stats);
   } catch (error) {
-    res.status(500).json({
-      error: 'Failed to get system stats',
-      message: error.message
-    });
+    res.status(500).json({ error: 'Failed to get system stats', message: error.message });
   }
 });
 
+// Detailed stats endpoint with all enhanced metrics
+app.get('/stats/detailed', authenticate, (req, res) => {
+  try {
+    const stats = getDetailedStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get detailed stats', message: error.message });
+  }
+});
+
+// Historical metrics query
+app.get('/history/metrics', authenticate, (req, res) => {
+  try {
+    const end = parseInt(req.query.end) || Date.now();
+    const start = parseInt(req.query.start) || (end - 3600000); // Default: last hour
+    const resolution = req.query.resolution || 'raw';
+
+    const data = db.queryMetrics(start, end, resolution);
+    res.json({ start, end, resolution, count: data.length, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to query metrics', message: error.message });
+  }
+});
+
+// Per-core CPU history
+app.get('/history/cores', authenticate, (req, res) => {
+  try {
+    const end = parseInt(req.query.end) || Date.now();
+    const start = parseInt(req.query.start) || (end - 3600000);
+    const coreId = req.query.core !== undefined ? parseInt(req.query.core) : null;
+
+    const data = db.queryCpuCores(start, end, coreId);
+    res.json({ start, end, coreId, count: data.length, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to query CPU cores', message: error.message });
+  }
+});
+
+// Disk I/O history
+app.get('/history/disk-io', authenticate, (req, res) => {
+  try {
+    const end = parseInt(req.query.end) || Date.now();
+    const start = parseInt(req.query.start) || (end - 3600000);
+    const device = req.query.device || null;
+
+    const data = db.queryDiskIo(start, end, device);
+    res.json({ start, end, device, count: data.length, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to query disk I/O', message: error.message });
+  }
+});
+
+// Top processes history
+app.get('/history/processes', authenticate, (req, res) => {
+  try {
+    const end = parseInt(req.query.end) || Date.now();
+    const start = parseInt(req.query.start) || (end - 3600000);
+
+    const data = db.queryTopProcesses(start, end);
+    res.json({ start, end, count: data.length, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to query processes', message: error.message });
+  }
+});
+
+// Get alerts
+app.get('/alerts', authenticate, (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const alerts = db.getAlerts(limit);
+    res.json(alerts);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get alerts', message: error.message });
+  }
+});
+
+// Resolve an alert
+app.post('/alerts/:id/resolve', authenticate, (req, res) => {
+  try {
+    db.resolveAlert(parseInt(req.params.id));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to resolve alert', message: error.message });
+  }
+});
+
+// Get bottleneck analysis
+app.get('/analysis/bottlenecks', authenticate, (req, res) => {
+  try {
+    const detailedMetrics = metrics.getDetailedMetrics();
+    res.json({
+      timestamp: new Date().toISOString(),
+      bottlenecks: detailedMetrics.bottlenecks,
+      summary: {
+        cpuCoreSaturation: detailedMetrics.bottlenecks.some(b => b.type === 'cpu_core_saturation'),
+        highIoWait: detailedMetrics.bottlenecks.some(b => b.type === 'high_iowait'),
+        memoryPressure: detailedMetrics.bottlenecks.some(b => b.type === 'memory_pressure'),
+        thermalThrottling: detailedMetrics.bottlenecks.some(b => b.type === 'thermal_throttle'),
+        diskLatency: detailedMetrics.bottlenecks.some(b => b.type === 'disk_latency')
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to analyze bottlenecks', message: error.message });
+  }
+});
+
+// Database stats
+app.get('/db/stats', authenticate, (req, res) => {
+  try {
+    const stats = db.getDbStats();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get DB stats', message: error.message });
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing database...');
+  db.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, closing database...');
+  db.close();
+  process.exit(0);
+});
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Home stats agent running on port ${PORT}`);
+  console.log(`Home stats agent v2.0.0 running on port ${PORT}`);
   console.log(`Server name: ${process.env.SERVER_NAME || 'Home Server'}`);
+  console.log(`Metrics collection: every ${METRICS_INTERVAL / 1000}s`);
+  console.log(`Process collection: every ${PROCESS_INTERVAL / 1000}s`);
 });

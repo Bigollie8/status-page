@@ -626,6 +626,109 @@ async function handleServersRequest(req, res) {
 app.get('/api/servers', handleServersRequest);
 app.get('/status/api/servers', handleServersRequest);
 
+// ============ HOME AUDIT ENDPOINTS ============
+// Get base URL for home agent (remove /stats from HOME_STATS_URL)
+const HOME_AGENT_BASE = HOME_STATS_URL.replace(/\/stats$/, '');
+
+// Helper to proxy requests to home agent
+async function proxyToHomeAgent(endpoint, res, queryParams = '') {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const url = `${HOME_AGENT_BASE}${endpoint}${queryParams ? '?' + queryParams : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'X-API-Key': HOME_STATS_KEY,
+        'Accept': 'application/json'
+      }
+    });
+
+    clearTimeout(timeout);
+
+    if (response.ok) {
+      const data = await response.json();
+      res.json(data);
+    } else {
+      res.status(response.status).json({
+        error: `Home agent returned ${response.status}`,
+        message: await response.text()
+      });
+    }
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      res.status(504).json({ error: 'Request timeout', message: 'Home agent did not respond in time' });
+    } else {
+      res.status(502).json({ error: 'Failed to reach home agent', message: error.message });
+    }
+  }
+}
+
+// Detailed audit stats from home server
+async function handleHomeAudit(req, res) {
+  await proxyToHomeAgent('/stats/detailed', res);
+}
+app.get('/api/home/audit', handleHomeAudit);
+app.get('/status/api/home/audit', handleHomeAudit);
+
+// Historical metrics from home server
+async function handleHomeHistory(req, res) {
+  const params = new URLSearchParams();
+  if (req.query.start) params.set('start', req.query.start);
+  if (req.query.end) params.set('end', req.query.end);
+  if (req.query.resolution) params.set('resolution', req.query.resolution);
+  await proxyToHomeAgent('/history/metrics', res, params.toString());
+}
+app.get('/api/home/history', handleHomeHistory);
+app.get('/status/api/home/history', handleHomeHistory);
+
+// Per-core CPU history
+async function handleHomeCores(req, res) {
+  const params = new URLSearchParams();
+  if (req.query.start) params.set('start', req.query.start);
+  if (req.query.end) params.set('end', req.query.end);
+  if (req.query.core) params.set('core', req.query.core);
+  await proxyToHomeAgent('/history/cores', res, params.toString());
+}
+app.get('/api/home/cores', handleHomeCores);
+app.get('/status/api/home/cores', handleHomeCores);
+
+// Disk I/O history
+async function handleHomeDiskIo(req, res) {
+  const params = new URLSearchParams();
+  if (req.query.start) params.set('start', req.query.start);
+  if (req.query.end) params.set('end', req.query.end);
+  if (req.query.device) params.set('device', req.query.device);
+  await proxyToHomeAgent('/history/disk-io', res, params.toString());
+}
+app.get('/api/home/disk-io', handleHomeDiskIo);
+app.get('/status/api/home/disk-io', handleHomeDiskIo);
+
+// Alerts from home server
+async function handleHomeAlerts(req, res) {
+  const params = new URLSearchParams();
+  if (req.query.limit) params.set('limit', req.query.limit);
+  await proxyToHomeAgent('/alerts', res, params.toString());
+}
+app.get('/api/home/alerts', handleHomeAlerts);
+app.get('/status/api/home/alerts', handleHomeAlerts);
+
+// Bottleneck analysis
+async function handleHomeAnalysis(req, res) {
+  await proxyToHomeAgent('/analysis/bottlenecks', res);
+}
+app.get('/api/home/analysis', handleHomeAnalysis);
+app.get('/status/api/home/analysis', handleHomeAnalysis);
+
+// Database stats from home agent
+async function handleHomeDbStats(req, res) {
+  await proxyToHomeAgent('/db/stats', res);
+}
+app.get('/api/home/db-stats', handleHomeDbStats);
+app.get('/status/api/home/db-stats', handleHomeDbStats);
+
 // Serve index.html for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
