@@ -964,13 +964,14 @@
     }
 
     function renderProcesses(data) {
-      const processes = data.processes || [];
+      // Filter out entries with null cpu (header rows or invalid data)
+      const processes = (data.processes || []).filter(p => p.cpu !== null && p.pid !== null);
 
       if (processes.length === 0) {
         return `
           <div class="metric-card">
             <div class="metric-header">Top Processes</div>
-            <div class="no-alerts">No process data available.</div>
+            <div class="no-alerts">No process data available. Container can only see its own processes.</div>
           </div>
         `;
       }
@@ -991,11 +992,11 @@
             <tbody>
               ${processes.slice(0, 10).map(p => `
                 <tr>
-                  <td style="font-family: monospace; color: var(--text-muted);">${p.pid}</td>
+                  <td style="font-family: monospace; color: var(--text-muted);">${p.pid || '-'}</td>
                   <td style="color: var(--text-secondary);">${escapeHtml(p.user || '-')}</td>
-                  <td class="process-command" title="${escapeHtml(p.command)}">${escapeHtml(p.command)}</td>
-                  <td class="process-cpu" style="color: ${getStatusClass(p.cpu) === 'critical' ? 'var(--red)' : getStatusClass(p.cpu) === 'warning' ? 'var(--yellow)' : 'var(--text-primary)'};">${p.cpu.toFixed(1)}%</td>
-                  <td class="process-mem">${p.memory.toFixed(1)}%</td>
+                  <td class="process-command" title="${escapeHtml(p.command || '')}">${escapeHtml(p.command || '-')}</td>
+                  <td class="process-cpu" style="color: ${getStatusClass(p.cpu || 0) === 'critical' ? 'var(--red)' : getStatusClass(p.cpu || 0) === 'warning' ? 'var(--yellow)' : 'var(--text-primary)'};">${(p.cpu || 0).toFixed(1)}%</td>
+                  <td class="process-mem">${(p.memory || 0).toFixed(1)}%</td>
                 </tr>
               `).join('')}
             </tbody>

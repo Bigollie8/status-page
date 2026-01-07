@@ -8,8 +8,9 @@ const fs = require('fs');
 const os = require('os');
 
 // Use host paths if running in container
-const PROC_PATH = process.env.HOST_PROC || '/proc';
-const SYS_PATH = process.env.HOST_SYS || '/sys';
+const PROC_PATH = process.env.HOST_PROC || '/host/proc';
+const SYS_PATH = process.env.HOST_SYS || '/host/sys';
+const HOST_DRIVES = process.env.HOST_DRIVES || '/host/drives';
 
 // Previous values for calculating rates
 let prevCpuStats = null;
@@ -223,35 +224,109 @@ function getMemoryPressure() {
 
 /**
  * Get top processes by CPU and memory usage
+ * Tries to read from host /proc if available
  */
 function getTopProcesses(limit = 10) {
   try {
+    // Try to get host processes by reading from host /proc
+    if (fs.existsSync(`${PROC_PATH}/1/comm`)) {
+      return getHostProcesses(limit);
+    }
+
+    // Fallback to container processes
     const output = execSync(
-      `ps aux --sort=-%cpu 2>/dev/null | head -${limit + 1} | tail -${limit}`,
+      `ps aux --sort=-%cpu 2>/dev/null | head -${limit + 1}`,
       { encoding: 'utf8', timeout: 5000 }
     );
 
     const processes = [];
     const lines = output.split('\n').filter(l => l.trim());
 
-    for (const line of lines) {
+    // Skip header line
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
       const parts = line.split(/\s+/);
       if (parts.length < 11) continue;
 
+      const pid = parseInt(parts[1]);
+      const cpu = parseFloat(parts[2]);
+      if (isNaN(pid) || isNaN(cpu)) continue;
+
       processes.push({
         user: parts[0],
-        pid: parseInt(parts[1]),
-        cpu: parseFloat(parts[2]),
-        memory: parseFloat(parts[3]),
-        vsz: parseInt(parts[4]) * 1024,
-        rss: parseInt(parts[5]) * 1024,
-        stat: parts[7],
+        pid,
+        cpu,
+        memory: parseFloat(parts[3]) || 0,
+        vsz: parseInt(parts[4]) * 1024 || 0,
+        rss: parseInt(parts[5]) * 1024 || 0,
+        stat: parts[7] || '',
         command: parts.slice(10).join(' ').substring(0, 80)
       });
     }
     return processes;
   } catch (error) {
     console.error('Error getting top processes:', error.message);
+    return [];
+  }
+}
+
+/**
+ * Get host processes from mounted /proc
+ */
+function getHostProcesses(limit = 10) {
+  try {
+    const processes = [];
+    const procDirs = fs.readdirSync(PROC_PATH).filter(f => /^\d+$/.test(f));
+
+    for (const pid of procDirs) {
+      try {
+        const statPath = `${PROC_PATH}/${pid}/stat`;
+        const statusPath = `${PROC_PATH}/${pid}/status`;
+        const cmdlinePath = `${PROC_PATH}/${pid}/cmdline`;
+
+        if (!fs.existsSync(statPath)) continue;
+
+        const stat = fs.readFileSync(statPath, 'utf8');
+        const statParts = stat.split(' ');
+
+        // Get command name
+        let command = statParts[1].replace(/[()]/g, '');
+        try {
+          const cmdline = fs.readFileSync(cmdlinePath, 'utf8').replace(/\0/g, ' ').trim();
+          if (cmdline) command = cmdline.substring(0, 80);
+        } catch (e) {}
+
+        // Parse stat for CPU times
+        const utime = parseInt(statParts[13]) || 0;
+        const stime = parseInt(statParts[14]) || 0;
+        const rss = (parseInt(statParts[23]) || 0) * 4096; // RSS in pages * page size
+
+        // Get user from status
+        let user = 'unknown';
+        try {
+          const status = fs.readFileSync(statusPath, 'utf8');
+          const uidMatch = status.match(/Uid:\s+(\d+)/);
+          if (uidMatch) user = `uid:${uidMatch[1]}`;
+        } catch (e) {}
+
+        processes.push({
+          pid: parseInt(pid),
+          user,
+          cpu: 0, // Will need delta calculation
+          memory: 0,
+          rss,
+          cpuTime: utime + stime,
+          command
+        });
+      } catch (e) {
+        continue;
+      }
+    }
+
+    // Sort by RSS (memory) since we can't easily get CPU % without deltas
+    return processes.sort((a, b) => b.rss - a.rss).slice(0, limit);
+  } catch (error) {
+    console.error('Error getting host processes:', error.message);
     return [];
   }
 }
@@ -453,6 +528,104 @@ function getDetailedMetrics() {
   return metrics;
 }
 
+/**
+ * Get disk usage from mounted host drives
+ */
+function getHostDiskUsage() {
+  const disks = [];
+
+  // Check for mounted Windows drives
+  const driveLetters = ['c', 'd', 'e', 'f', 'g', 'h'];
+  for (const letter of driveLetters) {
+    const mountPath = `${HOST_DRIVES}/${letter}`;
+    try {
+      if (!fs.existsSync(mountPath)) continue;
+
+      // Try to get disk stats using df on the mount point
+      const output = execSync(`df -B1 "${mountPath}" 2>/dev/null | tail -1`, { encoding: 'utf8', timeout: 5000 });
+      const parts = output.trim().split(/\s+/);
+
+      if (parts.length >= 4) {
+        const total = parseInt(parts[1]) || 0;
+        const used = parseInt(parts[2]) || 0;
+        const available = parseInt(parts[3]) || 0;
+
+        if (total > 1073741824) { // Only show > 1GB drives
+          disks.push({
+            mount: `${letter.toUpperCase()}:`,
+            filesystem: parts[0],
+            total,
+            used,
+            available,
+            usage: Math.round((used / total) * 1000) / 10,
+            label: letter === 'c' ? 'System' : (letter === 'g' ? 'Storage' : '')
+          });
+        }
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+
+  return disks;
+}
+
+/**
+ * Try to get GPU info via docker socket or direct nvidia-smi
+ */
+function getGpuInfo() {
+  // First try nvidia-smi directly (works if container has GPU passthrough)
+  try {
+    const output = execSync('nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits 2>/dev/null', { encoding: 'utf8', timeout: 5000 });
+    const gpus = output.trim().split('\n').filter(line => line).map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      const memUsed = parseInt(parts[3]) || 0;
+      const memTotal = parseInt(parts[4]) || 1;
+      return {
+        index: parseInt(parts[0]) || 0,
+        name: parts[1] || 'Unknown GPU',
+        usage: parseFloat(parts[2]) || 0,
+        memoryUsed: memUsed * 1024 * 1024,
+        memoryTotal: memTotal * 1024 * 1024,
+        memoryUsage: Math.round((memUsed / memTotal) * 100 * 10) / 10,
+        temperature: parseInt(parts[5]) || 0,
+        powerDraw: parseFloat(parts[6]) || 0
+      };
+    });
+    if (gpus.length > 0) return gpus;
+  } catch (e) {
+    // nvidia-smi not available directly
+  }
+
+  // Try via docker exec on host (requires docker socket)
+  try {
+    const output = execSync(
+      'docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits 2>/dev/null',
+      { encoding: 'utf8', timeout: 10000 }
+    );
+    const gpus = output.trim().split('\n').filter(line => line).map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      const memUsed = parseInt(parts[3]) || 0;
+      const memTotal = parseInt(parts[4]) || 1;
+      return {
+        index: parseInt(parts[0]) || 0,
+        name: parts[1] || 'Unknown GPU',
+        usage: parseFloat(parts[2]) || 0,
+        memoryUsed: memUsed * 1024 * 1024,
+        memoryTotal: memTotal * 1024 * 1024,
+        memoryUsage: Math.round((memUsed / memTotal) * 100 * 10) / 10,
+        temperature: parseInt(parts[5]) || 0,
+        powerDraw: parseFloat(parts[6]) || 0
+      };
+    });
+    if (gpus.length > 0) return gpus;
+  } catch (e) {
+    // Docker GPU access not available
+  }
+
+  return [];
+}
+
 // Initialize - collect baseline data
 function initialize() {
   // Run once to populate previous values for rate calculations
@@ -471,5 +644,7 @@ module.exports = {
   getKernelStats,
   analyzeBottlenecks,
   getDetailedMetrics,
+  getHostDiskUsage,
+  getGpuInfo,
   initialize
 };

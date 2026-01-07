@@ -241,6 +241,8 @@ function getSystemStats() {
 function getDetailedStats() {
   const basicStats = getSystemStats();
   const detailedMetrics = metrics.getDetailedMetrics();
+  const hostDisks = metrics.getHostDiskUsage();
+  const gpuInfo = metrics.getGpuInfo();
 
   return {
     ...basicStats,
@@ -254,7 +256,11 @@ function getDetailedStats() {
       ...basicStats.memory,
       pressure: detailedMetrics.memoryPressure
     },
+    // Use host disks if available, fallback to container disks
+    disks: hostDisks.length > 0 ? hostDisks : basicStats.disks,
     diskIo: detailedMetrics.diskIo,
+    // Use GPU info from metrics module
+    gpu: gpuInfo.length > 0 ? gpuInfo : basicStats.gpu,
     processes: detailedMetrics.topProcesses,
     kernel: detailedMetrics.kernelStats,
     bottlenecks: detailedMetrics.bottlenecks
