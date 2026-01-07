@@ -209,10 +209,15 @@ function formatUptime(seconds) {
   return `${minutes}m`;
 }
 
-// Get all system stats (legacy format for compatibility)
+// Get all system stats (uses host data when available)
 function getSystemStats() {
   const uptime = os.uptime();
   const loadAvg = os.loadavg();
+
+  // Use host disk data if available, fallback to container mounts
+  const hostDisks = metrics.getHostDiskUsage();
+  const gpuInfo = metrics.getGpuInfo();
+  const hostMemory = metrics.getHostMemory();
 
   return {
     serverName: process.env.SERVER_NAME || 'Home Server',
@@ -227,10 +232,10 @@ function getSystemStats() {
       '15m': Math.round(loadAvg[2] * 100) / 100
     },
     cpu: getCpuUsage(),
-    memory: getMemoryUsage(),
-    disk: getDiskUsage(),
-    disks: getAllDisks(),
-    gpu: getGpuUsage(),
+    memory: hostMemory.total > 0 ? hostMemory : getMemoryUsage(),
+    disk: hostDisks.length > 0 ? hostDisks[0] : getDiskUsage(),
+    disks: hostDisks.length > 0 ? hostDisks : getAllDisks(),
+    gpu: gpuInfo.length > 0 ? gpuInfo : getGpuUsage(),
     containers: getDockerStats(),
     network: getNetworkStats(),
     timestamp: new Date().toISOString()

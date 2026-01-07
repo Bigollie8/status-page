@@ -626,6 +626,70 @@ function getGpuInfo() {
   return [];
 }
 
+/**
+ * Get host memory info (attempts to read actual Windows host memory)
+ */
+function getHostMemory() {
+  // Try to read from mounted host memory info file
+  const memInfoPath = process.env.HOST_MEMINFO || '/host/meminfo';
+  try {
+    if (fs.existsSync(memInfoPath)) {
+      const content = fs.readFileSync(memInfoPath, 'utf8');
+      const lines = content.trim().split('\n');
+      const memInfo = {};
+      for (const line of lines) {
+        const [key, value] = line.split(':').map(s => s.trim());
+        if (value) {
+          memInfo[key] = parseInt(value.replace(/\s*kB$/, '')) * 1024;
+        }
+      }
+      const total = memInfo.MemTotal || 0;
+      const free = memInfo.MemFree || 0;
+      const available = memInfo.MemAvailable || free;
+      const used = total - available;
+      return {
+        total,
+        used,
+        free: available,
+        usage: total > 0 ? Math.round((used / total) * 1000) / 10 : 0
+      };
+    }
+  } catch (e) {
+    // Host meminfo not available
+  }
+
+  // Try via docker to get Windows host memory
+  try {
+    const output = execSync(
+      'docker run --rm mcr.microsoft.com/windows/nanoserver:ltsc2022 cmd /c "wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /value" 2>/dev/null',
+      { encoding: 'utf8', timeout: 10000 }
+    );
+    const lines = output.split('\n');
+    let total = 0, free = 0;
+    for (const line of lines) {
+      if (line.startsWith('TotalVisibleMemorySize=')) {
+        total = parseInt(line.split('=')[1]) * 1024;
+      } else if (line.startsWith('FreePhysicalMemory=')) {
+        free = parseInt(line.split('=')[1]) * 1024;
+      }
+    }
+    if (total > 0) {
+      const used = total - free;
+      return {
+        total,
+        used,
+        free,
+        usage: Math.round((used / total) * 1000) / 10
+      };
+    }
+  } catch (e) {
+    // Windows memory query not available
+  }
+
+  // Return empty to signal fallback to default
+  return { total: 0, used: 0, free: 0, usage: 0 };
+}
+
 // Initialize - collect baseline data
 function initialize() {
   // Run once to populate previous values for rate calculations
@@ -646,5 +710,6 @@ module.exports = {
   getDetailedMetrics,
   getHostDiskUsage,
   getGpuInfo,
+  getHostMemory,
   initialize
 };
