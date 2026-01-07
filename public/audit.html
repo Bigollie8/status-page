@@ -385,6 +385,125 @@
       font-family: 'SF Mono', Monaco, monospace;
     }
 
+    /* GPU */
+    .gpu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .gpu-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .gpu-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .gpu-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .gpu-stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .gpu-stat-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .gpu-vram-bar {
+      height: 6px;
+      background: var(--bg-primary);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .gpu-vram-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .gpu-vram-fill.good { background: var(--green); }
+    .gpu-vram-fill.warning { background: var(--yellow); }
+    .gpu-vram-fill.critical { background: var(--red); }
+
+    /* Storage */
+    .storage-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .storage-item {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .storage-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .storage-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .storage-usage {
+      font-size: 1.2rem;
+      font-weight: 700;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .storage-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .storage-bar {
+      height: 8px;
+      background: var(--bg-primary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .storage-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .storage-fill.good { background: var(--green); }
+    .storage-fill.warning { background: var(--yellow); }
+    .storage-fill.critical { background: var(--red); }
+
+    .storage-details {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
     /* Disk I/O */
     .disk-io-list {
       display: flex;
@@ -1033,6 +1152,80 @@
       `;
     }
 
+    function renderGpuMetrics(data) {
+      const gpus = data.gpu || [];
+      if (gpus.length === 0) return '';
+
+      return `
+        <div class="metric-card">
+          <div class="metric-header">GPU</div>
+          <div class="gpu-list">
+            ${gpus.map(gpu => {
+              const usageClass = getStatusClass(gpu.usage || 0, 70, 90);
+              const tempClass = getStatusClass(gpu.temperature || 0, 70, 85);
+              const memClass = getStatusClass(gpu.memoryUsage || 0, 80, 95);
+              return `
+                <div class="gpu-card">
+                  <div class="gpu-name">${escapeHtml(gpu.name || 'Unknown GPU')}</div>
+                  <div class="gpu-stats-grid">
+                    <div class="gpu-stat">
+                      <div class="gpu-stat-label">Usage</div>
+                      <div class="gpu-stat-value ${usageClass}">${(gpu.usage || 0).toFixed(0)}%</div>
+                    </div>
+                    <div class="gpu-stat">
+                      <div class="gpu-stat-label">Temperature</div>
+                      <div class="gpu-stat-value ${tempClass}">${gpu.temperature || 0}°C</div>
+                    </div>
+                    <div class="gpu-stat">
+                      <div class="gpu-stat-label">VRAM</div>
+                      <div class="gpu-stat-value ${memClass}">${(gpu.memoryUsage || 0).toFixed(1)}%</div>
+                    </div>
+                    <div class="gpu-stat">
+                      <div class="gpu-stat-label">Power</div>
+                      <div class="gpu-stat-value">${(gpu.powerDraw || 0).toFixed(0)}W</div>
+                    </div>
+                  </div>
+                  <div class="gpu-vram-bar">
+                    <div class="gpu-vram-fill ${memClass}" style="width: ${gpu.memoryUsage || 0}%"></div>
+                  </div>
+                  <div class="metric-subtitle">${formatBytes(gpu.memoryUsed || 0)} / ${formatBytes(gpu.memoryTotal || 0)}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderStorageMetrics(data) {
+      const disks = data.disks || [];
+      if (disks.length === 0) return '';
+
+      return `
+        <div class="metric-card">
+          <div class="metric-header">Storage</div>
+          <div class="storage-grid">
+            ${disks.map(disk => {
+              const usageClass = getStatusClass(disk.usage || 0, 80, 95);
+              return `
+                <div class="storage-item">
+                  <div class="storage-header">
+                    <div class="storage-name">${escapeHtml(disk.mount || 'Unknown')}</div>
+                    <div class="storage-usage ${usageClass}">${(disk.usage || 0).toFixed(1)}%</div>
+                  </div>
+                  ${disk.label ? `<div class="storage-label">${escapeHtml(disk.label)}</div>` : ''}
+                  <div class="storage-bar">
+                    <div class="storage-fill ${usageClass}" style="width: ${disk.usage || 0}%"></div>
+                  </div>
+                  <div class="storage-details">${formatBytes(disk.used || 0)} / ${formatBytes(disk.total || 0)}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
     function renderAuditData(data, alerts) {
       const content = document.getElementById('content');
 
@@ -1042,6 +1235,8 @@
         <div class="metrics-grid">
           ${renderCpuMetrics(data)}
           ${renderMemoryMetrics(data)}
+          ${renderGpuMetrics(data)}
+          ${renderStorageMetrics(data)}
           ${renderDiskIo(data)}
           ${renderProcesses(data)}
           ${renderKernelStats(data)}
