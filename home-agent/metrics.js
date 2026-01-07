@@ -600,8 +600,8 @@ function getGpuInfo() {
   // Try via docker exec on host (requires docker socket)
   try {
     const output = execSync(
-      'docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits 2>/dev/null',
-      { encoding: 'utf8', timeout: 10000 }
+      'docker run --rm --gpus all nvidia/cuda:12.0.0-base-ubuntu22.04 nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits 2>/dev/null',
+      { encoding: 'utf8', timeout: 15000 }
     );
     const gpus = output.trim().split('\n').filter(line => line).map(line => {
       const parts = line.split(',').map(p => p.trim());

@@ -8,7 +8,8 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    lm-sensors
+    lm-sensors \
+    docker-cli
 
 # Create data directory for SQLite persistence
 RUN mkdir -p /app/data
