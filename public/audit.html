@@ -1351,6 +1351,22 @@
       height: auto;
     }
 
+    /* Scrollable containers for wide content */
+    .scroll-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+
+    .scroll-wrapper::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .scroll-wrapper::-webkit-scrollbar-thumb {
+      background: var(--bg-hover);
+      border-radius: 3px;
+    }
+
     @media (max-width: 768px) {
       .container {
         padding: 8px;
@@ -1440,18 +1456,38 @@
         overflow-x: auto;
       }
 
-      /* Fix tables on mobile */
-      table {
-        display: block;
-        overflow-x: auto;
+      /* Make wide elements scrollable on mobile */
+      table,
+      .process-table,
+      .metric-card,
+      .chart-card,
+      .bottleneck-summary,
+      .alerts-section,
+      .history-section {
         max-width: 100%;
+        overflow-x: auto;
         -webkit-overflow-scrolling: touch;
       }
 
       .process-table {
         display: block;
-        overflow-x: auto;
         font-size: 0.7rem;
+        white-space: nowrap;
+      }
+
+      .process-table th,
+      .process-table td {
+        padding: 8px 12px;
+      }
+
+      /* Ensure chart canvases are scrollable */
+      .chart-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      canvas {
+        min-width: 300px;
       }
 
       .alerts-section {

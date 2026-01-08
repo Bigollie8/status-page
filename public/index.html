@@ -918,6 +918,27 @@
       max-width: 100vw;
     }
 
+    img, video, canvas, svg, iframe {
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* Scrollable containers for wide content */
+    .scroll-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+
+    .scroll-wrapper::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .scroll-wrapper::-webkit-scrollbar-thumb {
+      background: var(--bg-hover);
+      border-radius: 3px;
+    }
+
     @media (max-width: 768px) {
       .container {
         padding: 8px;
@@ -998,16 +1019,25 @@
         gap: 6px;
       }
 
+      /* Make wide elements scrollable on mobile */
+      .services-table,
+      .server-card,
+      .gauges-grid,
+      .cpu-cores-section {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
       .services-table {
         font-size: 0.7rem;
         display: block;
-        overflow-x: auto;
+        white-space: nowrap;
       }
 
       .services-table th,
       .services-table td {
         padding: 8px 10px;
-        white-space: nowrap;
       }
 
       .servers-grid {

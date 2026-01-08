@@ -1,0 +1,25 @@
+[
+  {
+    "id": "inc-1767819612310-nextcloud",
+    "serviceId": "nextcloud",
+    "serviceName": "Nextcloud",
+    "status": "degraded",
+    "title": "Nextcloud Degraded Performance",
+    "message": "Request timeout (>5s)",
+    "error": "The user aborted a request.",
+    "startedAt": "2026-01-07T21:00:12.310Z",
+    "resolvedAt": "2026-01-07T21:01:11.171Z",
+    "updates": [
+      {
+        "timestamp": "2026-01-07T21:00:12.310Z",
+        "status": "degraded",
+        "message": "Nextcloud is experiencing degraded performance. Request timeout (>5s)"
+      },
+      {
+        "timestamp": "2026-01-07T21:01:11.171Z",
+        "status": "operational",
+        "message": "Nextcloud has recovered and is now operational."
+      }
+    ]
+  }
+]
