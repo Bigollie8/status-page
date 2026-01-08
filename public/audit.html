@@ -1503,6 +1503,70 @@
       .control-btn .kbd {
         display: none;
       }
+
+      .cpu-breakdown {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+      }
+
+      .breakdown-item {
+        padding: 8px;
+      }
+
+      .process-table th,
+      .process-table td {
+        padding: 6px 8px;
+        font-size: 0.65rem;
+      }
+
+      .command-palette {
+        margin: 0 4px;
+        max-width: calc(100vw - 8px);
+      }
+    }
+
+    @media (max-width: 360px) {
+      .bottleneck-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .bottleneck-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .cpu-breakdown {
+        grid-template-columns: 1fr;
+      }
+
+      .breakdown-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .metric-card {
+        padding: 10px;
+      }
+
+      .metric-value {
+        font-size: 1.5rem;
+      }
+
+      .control-group {
+        gap: 6px;
+      }
+
+      .control-btn {
+        padding: 5px 8px;
+        font-size: 0.7rem;
+      }
+
+      .refresh-btn {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+      }
     }
   </style>
 </head>
