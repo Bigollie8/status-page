@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>System Audit | basedsecurity.net</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F50D;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   <style>
@@ -15,30 +18,63 @@
     }
 
     :root {
-      --bg-primary: #0a0a0a;
-      --bg-secondary: #111111;
-      --bg-tertiary: #1a1a1a;
-      --text-primary: #ffffff;
-      --text-secondary: #888888;
-      --text-muted: #555555;
-      --border-color: #222222;
-      --green: #00d26a;
-      --green-dim: rgba(0, 210, 106, 0.1);
-      --yellow: #ffc107;
-      --yellow-dim: rgba(255, 193, 7, 0.1);
-      --red: #ff4757;
-      --red-dim: rgba(255, 71, 87, 0.1);
-      --blue: #3b82f6;
-      --blue-dim: rgba(59, 130, 246, 0.1);
-      --purple: #a855f7;
-      --purple-dim: rgba(168, 85, 247, 0.1);
-      --orange: #f97316;
-      --orange-dim: rgba(249, 115, 22, 0.1);
+      /* Dark Theme (Default) */
+      --bg-void: #000000;
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --bg-hover: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+      --border-color: #30363d;
+
+      /* Status Colors */
+      --green: #00ff9f;
+      --green-dim: rgba(0, 255, 159, 0.1);
+      --yellow: #ffcc00;
+      --yellow-dim: rgba(255, 204, 0, 0.1);
+      --red: #ff4444;
+      --red-dim: rgba(255, 68, 68, 0.1);
+      --blue: #58a6ff;
+      --blue-dim: rgba(88, 166, 255, 0.1);
+      --purple: #bc8cff;
+      --purple-dim: rgba(188, 140, 255, 0.1);
+      --orange: #ffa657;
+      --orange-dim: rgba(255, 166, 87, 0.1);
+
+      /* Resource Colors (htop inspired) */
+      --cpu-color: #58a6ff;
+      --memory-color: #7ee787;
+      --disk-color: #ffa657;
+      --gpu-color: #f778ba;
+
+      /* Terminal */
+      --terminal-green: #00ff9f;
+      --terminal-cursor: #00ff9f;
+
+      /* Fonts */
+      --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --font-system: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    [data-theme="light"] {
+      --bg-void: #ffffff;
+      --bg-primary: #f6f8fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f6f8fa;
+      --bg-hover: #eaeef2;
+      --text-primary: #1f2328;
+      --text-secondary: #656d76;
+      --text-muted: #8b949e;
+      --border-color: #d0d7de;
+      --terminal-green: #1a7f37;
+      --terminal-cursor: #1a7f37;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: var(--bg-primary);
+      font-family: var(--font-system);
+      background: var(--bg-void);
       color: var(--text-primary);
       min-height: 100vh;
       line-height: 1.6;
@@ -47,41 +83,326 @@
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 40px 20px;
+      padding: 24px 20px;
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 40px;
+    /* Window Chrome */
+    .window-chrome {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
     }
 
-    .logo {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-      letter-spacing: -0.5px;
+    .window-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
     }
 
-    .logo span { color: var(--green); }
+    .window-controls {
+      display: flex;
+      gap: 8px;
+    }
 
-    header p {
+    .window-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      cursor: default;
+    }
+
+    .window-btn.close { background: #ff5f57; }
+    .window-btn.minimize { background: #febc2e; }
+    .window-btn.maximize { background: #28c840; }
+
+    .window-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       color: var(--text-secondary);
-      font-size: 0.95rem;
     }
 
-    .nav-links {
-      margin-top: 16px;
+    .window-title .prompt {
+      color: var(--terminal-green);
     }
 
-    .nav-links a {
+    .window-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .window-actions a {
       color: var(--blue);
       text-decoration: none;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
     }
 
-    .nav-links a:hover {
+    .window-actions a:hover {
       text-decoration: underline;
+    }
+
+    /* ASCII Banner */
+    .ascii-banner {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      line-height: 1.2;
+      color: var(--terminal-green);
+      text-align: center;
+      padding: 20px;
+      white-space: pre;
+      overflow-x: auto;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    @media (max-width: 600px) {
+      .ascii-banner {
+        font-size: 6px;
+        padding: 12px;
+      }
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--blue);
+    }
+
+    .control-btn.active {
+      background: var(--blue-dim);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .control-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* Command Palette */
+    .command-palette-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 15vh;
+    }
+
+    .command-palette-overlay.open {
+      display: flex;
+    }
+
+    .command-palette {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .command-input-wrapper {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      gap: 12px;
+    }
+
+    .command-prompt {
+      color: var(--terminal-green);
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+    }
+
+    .command-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .command-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .command-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .command-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .command-item:hover,
+    .command-item.selected {
+      background: var(--bg-tertiary);
+    }
+
+    .command-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .command-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--text-muted);
+    }
+
+    .command-name {
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+    }
+
+    .command-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .command-shortcut {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Log Viewer */
+    .log-viewer {
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-color);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+    }
+
+    .log-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    .log-title .blink {
+      animation: blink 1s infinite;
+    }
+
+    .log-entries {
+      padding: 12px 16px;
+    }
+
+    .log-entry {
+      display: flex;
+      gap: 12px;
+      padding: 2px 0;
+      color: var(--text-secondary);
+    }
+
+    .log-time {
+      color: var(--text-muted);
+      min-width: 80px;
+    }
+
+    .log-level {
+      min-width: 50px;
+    }
+
+    .log-level.info { color: var(--blue); }
+    .log-level.success { color: var(--green); }
+    .log-level.warn { color: var(--yellow); }
+    .log-level.error { color: var(--red); }
+
+    .log-message {
+      flex: 1;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
     }
 
     /* Status Summary Card */
@@ -108,7 +429,7 @@
     .summary-time {
       font-size: 0.8rem;
       color: var(--text-muted);
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .bottleneck-grid {
@@ -228,7 +549,7 @@
     .alert-time {
       font-size: 0.75rem;
       color: var(--text-muted);
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .no-alerts {
@@ -305,7 +626,7 @@
     .cpu-type-value {
       font-size: 1rem;
       font-weight: 600;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .cpu-type-value.user { color: var(--green); }
@@ -337,7 +658,7 @@
     .core-value {
       font-size: 0.95rem;
       font-weight: 700;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .core-value.good { color: var(--green); }
@@ -384,7 +705,7 @@
     .mem-stat-value {
       font-size: 1.2rem;
       font-weight: 600;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     /* GPU */
@@ -425,7 +746,7 @@
     .gpu-stat-value {
       font-size: 1.1rem;
       font-weight: 600;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .gpu-vram-bar {
@@ -474,7 +795,7 @@
     .storage-usage {
       font-size: 1.2rem;
       font-weight: 700;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .storage-label {
@@ -528,7 +849,7 @@
 
     .disk-io-name {
       font-weight: 600;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .disk-io-util {
@@ -557,7 +878,7 @@
     }
 
     .disk-stat-value {
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
       color: var(--text-secondary);
     }
 
@@ -587,7 +908,7 @@
     }
 
     .process-command {
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
       font-size: 0.8rem;
       max-width: 200px;
       overflow: hidden;
@@ -596,7 +917,7 @@
     }
 
     .process-cpu, .process-mem {
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
       text-align: right;
     }
 
@@ -658,7 +979,7 @@
     .kernel-stat-value {
       font-size: 1.3rem;
       font-weight: 600;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     /* Refresh Controls */
@@ -942,7 +1263,7 @@
     .network-stat-value {
       font-size: 1.4rem;
       font-weight: 700;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .network-stat-value.rx { color: var(--green); }
@@ -966,7 +1287,7 @@
     .prediction-days {
       font-size: 1.2rem;
       font-weight: 700;
-      font-family: 'SF Mono', Monaco, monospace;
+      font-family: var(--font-mono);
     }
 
     .prediction-days.healthy { color: var(--green); }
@@ -1000,53 +1321,366 @@
         align-items: flex-start;
       }
     }
+      /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-hover);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 16px 12px;
+      }
+
+      .window-titlebar {
+        padding: 10px 12px;
+        font-size: 0.75rem;
+      }
+
+      .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .control-group {
+        justify-content: center;
+      }
+
+      .ascii-banner {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="logo">based<span>security</span>.net</div>
-      <p>Home Server System Audit</p>
-      <div class="nav-links">
-        <a href="index.html">&larr; Back to Status Page</a>
+  <!-- Command Palette -->
+  <div class="command-palette-overlay" id="command-palette">
+    <div class="command-palette">
+      <div class="command-input-wrapper">
+        <span class="command-prompt">&gt;</span>
+        <input type="text" class="command-input" id="command-input" placeholder="Type a command..." autocomplete="off">
       </div>
-    </header>
-
-    <div class="controls">
-      <button class="refresh-btn" id="refresh-btn" onclick="fetchAuditData()">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 2v6h-6"></path>
-          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
-          <path d="M3 22v-6h6"></path>
-          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
-        </svg>
-        Refresh Data
-      </button>
-      <div class="auto-refresh">
-        <input type="checkbox" id="auto-refresh" checked>
-        <label for="auto-refresh">Auto-refresh</label>
-        <select id="refresh-interval">
-          <option value="5000">5s</option>
-          <option value="10000" selected>10s</option>
-          <option value="30000">30s</option>
-          <option value="60000">1m</option>
-          <option value="300000">5m</option>
-        </select>
+      <div class="command-list" id="command-list">
+        <div class="command-item" data-command="refresh">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            <div>
+              <div class="command-name">Refresh</div>
+              <div class="command-desc">Refresh audit data</div>
+            </div>
+          </div>
+          <span class="command-shortcut">R</span>
+        </div>
+        <div class="command-item" data-command="theme">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <div>
+              <div class="command-name">Toggle Theme</div>
+              <div class="command-desc">Switch between dark and light mode</div>
+            </div>
+          </div>
+          <span class="command-shortcut">T</span>
+        </div>
+        <div class="command-item" data-command="sound">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <div>
+              <div class="command-name">Toggle Sound</div>
+              <div class="command-desc">Enable or disable sound notifications</div>
+            </div>
+          </div>
+          <span class="command-shortcut">S</span>
+        </div>
+        <div class="command-item" data-command="status">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <div>
+              <div class="command-name">Back to Status</div>
+              <div class="command-desc">Return to status page</div>
+            </div>
+          </div>
+          <span class="command-shortcut">B</span>
+        </div>
       </div>
     </div>
+  </div>
 
-    <div id="content">
-      <div class="loading-state">Loading audit data...</div>
+  <div class="container">
+    <div class="window-chrome">
+      <!-- Window Title Bar -->
+      <div class="window-titlebar">
+        <div class="window-controls">
+          <span class="window-btn close"></span>
+          <span class="window-btn minimize"></span>
+          <span class="window-btn maximize"></span>
+        </div>
+        <div class="window-title">
+          <span class="prompt">$</span> system-audit --deep
+        </div>
+        <div class="window-actions">
+          <a href="index.html">&larr; Status Page</a>
+        </div>
+      </div>
+
+      <!-- ASCII Banner -->
+      <div class="ascii-banner">
+ ____  _  _  ____  ____  ____  _  _     __   _  _  ____  __  ____
+/ ___)( \/ )/ ___)(_  _)(  __)( \/ )   / _\ / )( \(    \(  )(_  _)
+\___ \ )  / \___ \  )(   ) _) / \/ \  /    \) \/ ( ) D ( )(   )(
+(____/(__/  (____/ (__) (____)\_)(_/  \_/\_/\____/(____/(__) (__)
+      </div>
+
+      <!-- Controls Bar -->
+      <div class="controls-bar">
+        <div class="control-group">
+          <button class="control-btn" id="theme-toggle" onclick="toggleTheme()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <span id="theme-label">Dark</span>
+          </button>
+          <button class="control-btn" id="sound-toggle" onclick="toggleSound()">
+            <svg id="sound-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <span id="sound-label">Sound On</span>
+          </button>
+        </div>
+        <div class="control-group">
+          <button class="refresh-btn" id="refresh-btn" onclick="fetchAuditData()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 2v6h-6"></path>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+              <path d="M3 22v-6h6"></path>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+            </svg>
+            Refresh
+          </button>
+          <div class="auto-refresh">
+            <input type="checkbox" id="auto-refresh" checked>
+            <label for="auto-refresh">Auto</label>
+            <select id="refresh-interval">
+              <option value="5000">5s</option>
+              <option value="10000" selected>10s</option>
+              <option value="30000">30s</option>
+              <option value="60000">1m</option>
+            </select>
+          </div>
+        </div>
+        <div class="control-group">
+          <button class="control-btn" onclick="openCommandPalette()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+            <kbd class="kbd">Ctrl+K</kbd>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div id="content" style="padding: 24px;">
+        <div class="loading-state">Loading audit data...</div>
+      </div>
+
+      <!-- Log Viewer -->
+      <div class="log-viewer" id="log-viewer">
+        <div class="log-header">
+          <div class="log-title">
+            <span class="blink">&#9679;</span> Audit Logs
+          </div>
+          <button class="control-btn" onclick="clearLogs()" style="padding: 4px 8px; font-size: 0.7rem;">Clear</button>
+        </div>
+        <div class="log-entries" id="log-entries">
+          <div class="log-entry">
+            <span class="log-time">--:--:--</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-message">Initializing audit dashboard...</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <footer>
-      <p>Powered by <a href="https://portfolio.basedsecurity.net" target="_blank">basedsecurity.net</a></p>
+      <p>Powered by <a href="https://portfolio.basedsecurity.net" target="_blank">basedsecurity.net</a> | Press <kbd class="kbd">Ctrl+K</kbd> for commands</p>
     </footer>
   </div>
 
   <script>
+    // ==================== State ====================
     let autoRefreshInterval = null;
+    let soundEnabled = true;
+    const logs = [];
+    const maxLogs = 50;
 
+    // ==================== Sound System ====================
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      switch(type) {
+        case 'success':
+          oscillator.frequency.value = 880;
+          gainNode.gain.value = 0.1;
+          break;
+        case 'warning':
+          oscillator.frequency.value = 440;
+          gainNode.gain.value = 0.15;
+          break;
+        case 'error':
+          oscillator.frequency.value = 220;
+          gainNode.gain.value = 0.2;
+          break;
+        case 'refresh':
+          oscillator.frequency.value = 1200;
+          gainNode.gain.value = 0.05;
+          break;
+      }
+
+      oscillator.type = 'sine';
+      oscillator.start();
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      oscillator.stop(audioContext.currentTime + 0.1);
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const label = document.getElementById('sound-label');
+      label.textContent = soundEnabled ? 'Sound On' : 'Sound Off';
+      document.getElementById('sound-toggle').classList.toggle('active', soundEnabled);
+      if (soundEnabled) playSound('refresh');
+      localStorage.setItem('soundEnabled', soundEnabled);
+      addLog('info', `Sound ${soundEnabled ? 'enabled' : 'disabled'}`);
+    }
+
+    // ==================== Theme System ====================
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      document.getElementById('theme-label').textContent = newTheme === 'dark' ? 'Dark' : 'Light';
+      document.getElementById('theme-toggle').classList.toggle('active', newTheme === 'light');
+      localStorage.setItem('theme', newTheme);
+      addLog('info', `Theme changed to ${newTheme} mode`);
+    }
+
+    // ==================== Command Palette ====================
+    function openCommandPalette() {
+      document.getElementById('command-palette').classList.add('open');
+      document.getElementById('command-input').focus();
+    }
+
+    function closeCommandPalette() {
+      document.getElementById('command-palette').classList.remove('open');
+      document.getElementById('command-input').value = '';
+    }
+
+    function executeCommand(command) {
+      closeCommandPalette();
+      switch(command) {
+        case 'refresh':
+          fetchAuditData();
+          break;
+        case 'theme':
+          toggleTheme();
+          break;
+        case 'sound':
+          toggleSound();
+          break;
+        case 'status':
+          window.location.href = 'index.html';
+          break;
+      }
+      addLog('info', `Executed command: ${command}`);
+    }
+
+    // ==================== Logging System ====================
+    function addLog(level, message) {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour12: false });
+
+      logs.unshift({ time, level, message });
+      if (logs.length > maxLogs) logs.pop();
+
+      renderLogs();
+    }
+
+    function renderLogs() {
+      const container = document.getElementById('log-entries');
+      container.innerHTML = logs.map(log => `
+        <div class="log-entry">
+          <span class="log-time">${log.time}</span>
+          <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+          <span class="log-message">${escapeHtml(log.message)}</span>
+        </div>
+      `).join('');
+    }
+
+    function clearLogs() {
+      logs.length = 0;
+      addLog('info', 'Logs cleared');
+    }
+
+    // ==================== Keyboard Shortcuts ====================
+    document.addEventListener('keydown', (e) => {
+      // Ctrl+K or Cmd+K to open command palette
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+      }
+
+      // Escape to close command palette
+      if (e.key === 'Escape') {
+        closeCommandPalette();
+      }
+
+      // Quick shortcuts when palette is open
+      if (document.getElementById('command-palette').classList.contains('open')) {
+        if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          executeCommand('refresh');
+        } else if (e.key === 't' || e.key === 'T') {
+          e.preventDefault();
+          executeCommand('theme');
+        } else if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          executeCommand('sound');
+        } else if (e.key === 'b' || e.key === 'B') {
+          e.preventDefault();
+          executeCommand('status');
+        }
+      }
+    });
+
+    // Command palette click handlers
+    document.querySelectorAll('.command-item').forEach(item => {
+      item.addEventListener('click', () => {
+        executeCommand(item.dataset.command);
+      });
+    });
+
+    document.getElementById('command-palette').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        closeCommandPalette();
+      }
+    });
+
+    // ==================== Utility Functions ====================
     function getStatusClass(value, warning = 70, critical = 90) {
       if (value >= critical) return 'critical';
       if (value >= warning) return 'warning';
@@ -1980,9 +2614,20 @@
 
         renderAuditData(auditData, alertsData);
 
+        addLog('success', 'Audit data refreshed');
+        playSound('refresh');
+
+        // Log any active alerts
+        if (alertsData.active && alertsData.active.length > 0) {
+          addLog('warn', `${alertsData.active.length} active alert(s) detected`);
+          playSound('warning');
+        }
+
       } catch (error) {
         console.error('Failed to fetch audit data:', error);
         renderError(error.message);
+        addLog('error', `Failed to fetch data: ${error.message}`);
+        playSound('error');
       } finally {
         btn.disabled = false;
         btn.classList.remove('loading');
@@ -2008,22 +2653,44 @@
     document.getElementById('auto-refresh').addEventListener('change', function() {
       if (this.checked) {
         autoRefreshInterval = setInterval(fetchAuditData, getRefreshInterval());
+        addLog('info', 'Auto-refresh enabled');
       } else {
         clearInterval(autoRefreshInterval);
         autoRefreshInterval = null;
+        addLog('info', 'Auto-refresh disabled');
       }
     });
 
     // Refresh interval change
     document.getElementById('refresh-interval').addEventListener('change', function() {
       restartAutoRefresh();
+      addLog('info', `Refresh interval changed to ${this.options[this.selectedIndex].text}`);
     });
 
-    // Initial fetch
-    fetchAuditData();
+    // ==================== Initialize ====================
+    function init() {
+      // Load saved preferences
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.getElementById('theme-label').textContent = savedTheme === 'dark' ? 'Dark' : 'Light';
+      document.getElementById('theme-toggle').classList.toggle('active', savedTheme === 'light');
 
-    // Start auto-refresh
-    autoRefreshInterval = setInterval(fetchAuditData, getRefreshInterval());
+      const savedSound = localStorage.getItem('soundEnabled');
+      soundEnabled = savedSound !== 'false';
+      document.getElementById('sound-label').textContent = soundEnabled ? 'Sound On' : 'Sound Off';
+      document.getElementById('sound-toggle').classList.toggle('active', soundEnabled);
+
+      addLog('info', 'Audit dashboard initialized');
+      addLog('info', `Theme: ${savedTheme} | Sound: ${soundEnabled ? 'enabled' : 'disabled'}`);
+
+      // Initial fetch
+      fetchAuditData();
+
+      // Start auto-refresh
+      autoRefreshInterval = setInterval(fetchAuditData, getRefreshInterval());
+    }
+
+    init();
   </script>
 </body>
 </html>
