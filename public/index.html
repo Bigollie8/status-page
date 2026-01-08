@@ -505,6 +505,37 @@
       to { transform: rotate(360deg); }
     }
 
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .auto-refresh input[type="checkbox"] {
+      accent-color: var(--green);
+    }
+
+    .auto-refresh select {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .auto-refresh select:hover {
+      border-color: var(--blue);
+    }
+
+    .auto-refresh select:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+
     .error-message {
       background: var(--red-dim);
       border: 1px solid rgba(255, 71, 87, 0.3);
@@ -1054,6 +1085,16 @@
           </svg>
           Refresh
         </button>
+        <div class="auto-refresh">
+          <input type="checkbox" id="auto-refresh" checked>
+          <label for="auto-refresh">Auto-refresh</label>
+          <select id="refresh-interval">
+            <option value="10000">10s</option>
+            <option value="30000" selected>30s</option>
+            <option value="60000">1m</option>
+            <option value="300000">5m</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -1770,15 +1811,48 @@
       }
     }
 
+    // Auto-refresh management
+    let autoRefreshInterval = null;
+
+    function getRefreshInterval() {
+      return parseInt(document.getElementById('refresh-interval').value);
+    }
+
+    function fetchAll() {
+      fetchStatus();
+      fetchSystemStats();
+    }
+
+    function restartAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+      if (document.getElementById('auto-refresh').checked) {
+        autoRefreshInterval = setInterval(fetchAll, getRefreshInterval());
+      }
+    }
+
+    // Auto-refresh toggle
+    document.getElementById('auto-refresh').addEventListener('change', function() {
+      if (this.checked) {
+        autoRefreshInterval = setInterval(fetchAll, getRefreshInterval());
+      } else {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
+    });
+
+    // Refresh interval change
+    document.getElementById('refresh-interval').addEventListener('change', function() {
+      restartAutoRefresh();
+    });
+
     // Initial fetch
     fetchStatus();
     fetchSystemStats();
 
-    // Auto-refresh every 30 seconds
-    setInterval(() => {
-      fetchStatus();
-      fetchSystemStats();
-    }, 30000);
+    // Start auto-refresh
+    autoRefreshInterval = setInterval(fetchAll, getRefreshInterval());
   </script>
 </body>
 </html>

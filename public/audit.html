@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>System Audit | basedsecurity.net</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F50D;</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   <style>
     * {
       margin: 0;
@@ -714,8 +716,27 @@
       color: var(--text-secondary);
     }
 
-    .auto-refresh input {
+    .auto-refresh input[type="checkbox"] {
       accent-color: var(--green);
+    }
+
+    .auto-refresh select {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .auto-refresh select:hover {
+      border-color: var(--blue);
+    }
+
+    .auto-refresh select:focus {
+      outline: none;
+      border-color: var(--blue);
     }
 
     /* Error State */
@@ -750,6 +771,213 @@
 
     footer a:hover { color: var(--text-primary); }
 
+    /* History Charts Section */
+    .history-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .history-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .time-range-selector {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 4px;
+    }
+
+    .time-range-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .time-range-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-primary);
+    }
+
+    .time-range-btn.active {
+      background: var(--blue);
+      color: white;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+    }
+
+    .chart-container {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .chart-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 200px;
+    }
+
+    .chart-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--text-muted);
+    }
+
+    /* Service Health */
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .service-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+      border-left: 4px solid var(--green);
+    }
+
+    .service-card.degraded { border-left-color: var(--yellow); }
+    .service-card.down { border-left-color: var(--red); }
+    .service-card.timeout { border-left-color: var(--orange); }
+
+    .service-name {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .service-status {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .service-status.healthy { color: var(--green); }
+    .service-status.degraded { color: var(--yellow); }
+    .service-status.down { color: var(--red); }
+    .service-status.timeout { color: var(--orange); }
+
+    .service-details {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+
+    .uptime-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .uptime-badge.warning {
+      background: var(--yellow-dim);
+      color: var(--yellow);
+    }
+
+    .uptime-badge.critical {
+      background: var(--red-dim);
+      color: var(--red);
+    }
+
+    /* Network Bandwidth */
+    .network-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .network-stat {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .network-stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .network-stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .network-stat-value.rx { color: var(--green); }
+    .network-stat-value.tx { color: var(--blue); }
+
+    /* Disk Predictions */
+    .prediction-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .prediction-drive {
+      font-weight: 600;
+    }
+
+    .prediction-days {
+      font-size: 1.2rem;
+      font-weight: 700;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .prediction-days.healthy { color: var(--green); }
+    .prediction-days.warning { color: var(--yellow); }
+    .prediction-days.critical { color: var(--red); }
+
+    .prediction-trend {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
     @media (max-width: 768px) {
       .metrics-grid {
         grid-template-columns: 1fr;
@@ -761,6 +989,15 @@
 
       .cpu-breakdown {
         grid-template-columns: repeat(2, 1fr);
+      }
+
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .history-header {
+        flex-direction: column;
+        align-items: flex-start;
       }
     }
   </style>
@@ -787,7 +1024,14 @@
       </button>
       <div class="auto-refresh">
         <input type="checkbox" id="auto-refresh" checked>
-        <label for="auto-refresh">Auto-refresh (10s)</label>
+        <label for="auto-refresh">Auto-refresh</label>
+        <select id="refresh-interval">
+          <option value="5000">5s</option>
+          <option value="10000" selected>10s</option>
+          <option value="30000">30s</option>
+          <option value="60000">1m</option>
+          <option value="300000">5m</option>
+        </select>
       </div>
     </div>
 
@@ -1226,22 +1470,478 @@
       `;
     }
 
+    // Chart instances
+    let cpuChart = null;
+    let memoryChart = null;
+    let loadChart = null;
+    let gpuChart = null;
+    let networkChart = null;
+    let currentTimeRange = 3600000; // Default 1 hour
+
+    function renderHistorySection() {
+      return `
+        <div class="history-section">
+          <div class="history-header">
+            <span class="history-title">Performance History</span>
+            <div class="time-range-selector">
+              <button class="time-range-btn active" data-range="3600000">1H</button>
+              <button class="time-range-btn" data-range="21600000">6H</button>
+              <button class="time-range-btn" data-range="86400000">24H</button>
+              <button class="time-range-btn" data-range="604800000">7D</button>
+            </div>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-container">
+              <div class="chart-title">CPU Usage</div>
+              <div class="chart-wrapper">
+                <canvas id="cpu-chart"></canvas>
+              </div>
+            </div>
+            <div class="chart-container">
+              <div class="chart-title">Memory Usage</div>
+              <div class="chart-wrapper">
+                <canvas id="memory-chart"></canvas>
+              </div>
+            </div>
+            <div class="chart-container">
+              <div class="chart-title">Load Average</div>
+              <div class="chart-wrapper">
+                <canvas id="load-chart"></canvas>
+              </div>
+            </div>
+            <div class="chart-container">
+              <div class="chart-title">GPU Usage & Temperature</div>
+              <div class="chart-wrapper">
+                <canvas id="gpu-chart"></canvas>
+              </div>
+            </div>
+            <div class="chart-container">
+              <div class="chart-title">Network Bandwidth</div>
+              <div class="chart-wrapper">
+                <canvas id="network-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function getChartOptions(title, yMax = 100, yLabel = '%') {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#888888',
+              boxWidth: 12,
+              padding: 10,
+              font: { size: 11 }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1a1a1a',
+            titleColor: '#ffffff',
+            bodyColor: '#888888',
+            borderColor: '#333333',
+            borderWidth: 1,
+            padding: 10,
+            displayColors: true,
+            callbacks: {
+              label: function(context) {
+                return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}${yLabel}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              displayFormats: {
+                minute: 'HH:mm',
+                hour: 'HH:mm',
+                day: 'MMM d'
+              }
+            },
+            grid: {
+              color: '#222222',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#555555',
+              maxRotation: 0,
+              font: { size: 10 }
+            }
+          },
+          y: {
+            min: 0,
+            max: yMax,
+            grid: {
+              color: '#222222',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#555555',
+              font: { size: 10 },
+              callback: function(value) {
+                return value + yLabel;
+              }
+            }
+          }
+        }
+      };
+    }
+
+    async function fetchHistoryData(timeRange) {
+      const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
+      const end = Date.now();
+      const start = end - timeRange;
+
+      // Use hourly resolution for longer time ranges
+      let resolution = 'raw';
+      if (timeRange > 86400000) resolution = 'hourly'; // 24h+
+
+      try {
+        const res = await fetch(`${basePath}/api/home/history?start=${start}&end=${end}&resolution=${resolution}`);
+        if (!res.ok) throw new Error(`History API returned ${res.status}`);
+        const data = await res.json();
+        return data.data || [];
+      } catch (error) {
+        console.error('Failed to fetch history:', error);
+        return [];
+      }
+    }
+
+    function createChart(canvasId, datasets, options) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return null;
+
+      const ctx = canvas.getContext('2d');
+      return new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options
+      });
+    }
+
+    async function fetchGpuHistory(timeRange) {
+      const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
+      const end = Date.now();
+      const start = end - timeRange;
+      try {
+        const res = await fetch(`${basePath}/api/home/gpu-history?start=${start}&end=${end}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.data || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    async function fetchNetworkHistory(timeRange) {
+      const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
+      const end = Date.now();
+      const start = end - timeRange;
+      try {
+        const res = await fetch(`${basePath}/api/home/network-history?start=${start}&end=${end}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.data || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    async function renderCharts(timeRange, forceRecreate = false) {
+      const [historyData, gpuHistory, networkHistory] = await Promise.all([
+        fetchHistoryData(timeRange),
+        fetchGpuHistory(timeRange),
+        fetchNetworkHistory(timeRange)
+      ]);
+
+      if (historyData.length === 0) {
+        return;
+      }
+
+      // Prepare data
+      const cpuData = historyData.map(d => ({ x: d.timestamp, y: d.cpu_usage || 0 }));
+      const memData = historyData.map(d => ({ x: d.timestamp, y: d.memory_usage || 0 }));
+      const load1mData = historyData.map(d => ({ x: d.timestamp, y: d.load_1m || 0 }));
+      const load5mData = historyData.map(d => ({ x: d.timestamp, y: d.load_5m || 0 }));
+      const load15mData = historyData.map(d => ({ x: d.timestamp, y: d.load_15m || 0 }));
+
+      // GPU data
+      const gpuUsageData = gpuHistory.map(d => ({ x: d.timestamp, y: d.usage || 0 }));
+      const gpuTempData = gpuHistory.map(d => ({ x: d.timestamp, y: d.temperature || 0 }));
+
+      // Network data (aggregate by timestamp)
+      const networkByTime = {};
+      for (const n of networkHistory) {
+        if (!networkByTime[n.timestamp]) {
+          networkByTime[n.timestamp] = { rx: 0, tx: 0 };
+        }
+        networkByTime[n.timestamp].rx += n.rx_bytes_sec || 0;
+        networkByTime[n.timestamp].tx += n.tx_bytes_sec || 0;
+      }
+      const networkRxData = Object.entries(networkByTime).map(([ts, d]) => ({ x: parseInt(ts), y: d.rx / 1024 / 1024 })); // MB/s
+      const networkTxData = Object.entries(networkByTime).map(([ts, d]) => ({ x: parseInt(ts), y: d.tx / 1024 / 1024 }));
+
+      // Calculate max load for y-axis scaling
+      const maxLoad = Math.max(
+        ...load1mData.map(d => d.y),
+        ...load5mData.map(d => d.y),
+        ...load15mData.map(d => d.y),
+        1
+      );
+
+      const maxNetwork = Math.max(
+        ...networkRxData.map(d => d.y),
+        ...networkTxData.map(d => d.y),
+        0.1
+      );
+
+      // Update existing charts or create new ones
+      if (cpuChart && !forceRecreate) {
+        // Smoothly update data
+        cpuChart.data.datasets[0].data = cpuData;
+        cpuChart.update('none'); // 'none' disables animation for smooth updates
+      } else {
+        if (cpuChart) cpuChart.destroy();
+        cpuChart = createChart('cpu-chart', [
+          {
+            label: 'CPU Usage',
+            data: cpuData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2
+          }
+        ], getChartOptions('CPU Usage', 100, '%'));
+      }
+
+      if (memoryChart && !forceRecreate) {
+        memoryChart.data.datasets[0].data = memData;
+        memoryChart.update('none');
+      } else {
+        if (memoryChart) memoryChart.destroy();
+        memoryChart = createChart('memory-chart', [
+          {
+            label: 'Memory Usage',
+            data: memData,
+            borderColor: '#a855f7',
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2
+          }
+        ], getChartOptions('Memory Usage', 100, '%'));
+      }
+
+      if (loadChart && !forceRecreate) {
+        loadChart.data.datasets[0].data = load1mData;
+        loadChart.data.datasets[1].data = load5mData;
+        loadChart.data.datasets[2].data = load15mData;
+        loadChart.options.scales.y.max = Math.ceil(maxLoad * 1.2);
+        loadChart.update('none');
+      } else {
+        if (loadChart) loadChart.destroy();
+        loadChart = createChart('load-chart', [
+          {
+            label: '1m avg',
+            data: load1mData,
+            borderColor: '#00d26a',
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2
+          },
+          {
+            label: '5m avg',
+            data: load5mData,
+            borderColor: '#ffc107',
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2
+          },
+          {
+            label: '15m avg',
+            data: load15mData,
+            borderColor: '#ff4757',
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2
+          }
+        ], getChartOptions('Load Average', Math.ceil(maxLoad * 1.2), ''));
+      }
+
+      // GPU Chart
+      if (gpuUsageData.length > 0) {
+        if (gpuChart && !forceRecreate) {
+          gpuChart.data.datasets[0].data = gpuUsageData;
+          gpuChart.data.datasets[1].data = gpuTempData;
+          gpuChart.update('none');
+        } else {
+          if (gpuChart) gpuChart.destroy();
+          gpuChart = createChart('gpu-chart', [
+            {
+              label: 'GPU Usage %',
+              data: gpuUsageData,
+              borderColor: '#00d26a',
+              backgroundColor: 'rgba(0, 210, 106, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Temperature °C',
+              data: gpuTempData,
+              borderColor: '#ff4757',
+              backgroundColor: 'transparent',
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2,
+              yAxisID: 'y1'
+            }
+          ], {
+            ...getChartOptions('GPU', 100, '%'),
+            scales: {
+              ...getChartOptions('GPU', 100, '%').scales,
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                min: 0,
+                max: 100,
+                grid: { drawOnChartArea: false },
+                ticks: {
+                  color: '#555555',
+                  font: { size: 10 },
+                  callback: (v) => v + '°C'
+                }
+              }
+            }
+          });
+        }
+      }
+
+      // Network Chart
+      if (networkRxData.length > 0) {
+        if (networkChart && !forceRecreate) {
+          networkChart.data.datasets[0].data = networkRxData;
+          networkChart.data.datasets[1].data = networkTxData;
+          networkChart.options.scales.y.max = Math.ceil(maxNetwork * 1.2) || 1;
+          networkChart.update('none');
+        } else {
+          if (networkChart) networkChart.destroy();
+          networkChart = createChart('network-chart', [
+            {
+              label: 'Download',
+              data: networkRxData,
+              borderColor: '#00d26a',
+              backgroundColor: 'rgba(0, 210, 106, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2
+            },
+            {
+              label: 'Upload',
+              data: networkTxData,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 2
+            }
+          ], getChartOptions('Network', Math.ceil(maxNetwork * 1.2) || 1, ' MB/s'));
+        }
+      }
+    }
+
+    function setupTimeRangeButtons() {
+      document.querySelectorAll('.time-range-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+          // Update active state
+          document.querySelectorAll('.time-range-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+
+          // Fetch and render new data (force recreate for time range change)
+          currentTimeRange = parseInt(this.dataset.range);
+          await renderCharts(currentTimeRange, true);
+        });
+      });
+    }
+
+    // Track if initial render has happened
+    let chartsInitialized = false;
+
     function renderAuditData(data, alerts) {
       const content = document.getElementById('content');
 
-      content.innerHTML = `
-        ${renderBottleneckSummary(data)}
-        ${renderAlerts(alerts)}
-        <div class="metrics-grid">
-          ${renderCpuMetrics(data)}
-          ${renderMemoryMetrics(data)}
-          ${renderGpuMetrics(data)}
-          ${renderStorageMetrics(data)}
-          ${renderDiskIo(data)}
-          ${renderProcesses(data)}
-          ${renderKernelStats(data)}
-        </div>
-      `;
+      // Check if history section already exists
+      const historySection = document.querySelector('.history-section');
+
+      if (!historySection) {
+        // First render - build everything
+        content.innerHTML = `
+          ${renderBottleneckSummary(data)}
+          ${renderAlerts(alerts)}
+          ${renderHistorySection()}
+          <div class="metrics-grid">
+            ${renderCpuMetrics(data)}
+            ${renderMemoryMetrics(data)}
+            ${renderGpuMetrics(data)}
+            ${renderStorageMetrics(data)}
+            ${renderDiskIo(data)}
+            ${renderProcesses(data)}
+            ${renderKernelStats(data)}
+          </div>
+        `;
+        setupTimeRangeButtons();
+        renderCharts(currentTimeRange, true);
+        chartsInitialized = true;
+      } else {
+        // Update only the parts that need updating (not the charts)
+        const bottleneckSummary = document.querySelector('.bottleneck-summary');
+        const alertsSection = document.querySelector('.alerts-section');
+        const metricsGrid = document.querySelector('.metrics-grid');
+
+        if (bottleneckSummary) {
+          bottleneckSummary.outerHTML = renderBottleneckSummary(data);
+        }
+        if (alertsSection) {
+          alertsSection.outerHTML = renderAlerts(alerts);
+        }
+        if (metricsGrid) {
+          metricsGrid.innerHTML = `
+            ${renderCpuMetrics(data)}
+            ${renderMemoryMetrics(data)}
+            ${renderGpuMetrics(data)}
+            ${renderStorageMetrics(data)}
+            ${renderDiskIo(data)}
+            ${renderProcesses(data)}
+            ${renderKernelStats(data)}
+          `;
+        }
+
+        // Update charts smoothly without recreating
+        renderCharts(currentTimeRange, false);
+      }
     }
 
     function renderError(message) {
@@ -1289,21 +1989,41 @@
       }
     }
 
+    // Get current refresh interval from dropdown
+    function getRefreshInterval() {
+      return parseInt(document.getElementById('refresh-interval').value);
+    }
+
+    // Restart auto-refresh with current interval
+    function restartAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+      if (document.getElementById('auto-refresh').checked) {
+        autoRefreshInterval = setInterval(fetchAuditData, getRefreshInterval());
+      }
+    }
+
     // Auto-refresh toggle
     document.getElementById('auto-refresh').addEventListener('change', function() {
       if (this.checked) {
-        autoRefreshInterval = setInterval(fetchAuditData, 10000);
+        autoRefreshInterval = setInterval(fetchAuditData, getRefreshInterval());
       } else {
         clearInterval(autoRefreshInterval);
         autoRefreshInterval = null;
       }
     });
 
+    // Refresh interval change
+    document.getElementById('refresh-interval').addEventListener('change', function() {
+      restartAutoRefresh();
+    });
+
     // Initial fetch
     fetchAuditData();
 
     // Start auto-refresh
-    autoRefreshInterval = setInterval(fetchAuditData, 10000);
+    autoRefreshInterval = setInterval(fetchAuditData, getRefreshInterval());
   </script>
 </body>
 </html>

@@ -283,7 +283,10 @@ async function checkService(service) {
   }
 }
 
-// Get CPU usage percentage
+// Previous CPU stats for delta-based calculation
+let prevCpuTimes = null;
+
+// Get CPU usage percentage using delta-based measurement for accuracy
 function getCpuUsage() {
   const cpus = os.cpus();
   let totalIdle = 0;
@@ -296,9 +299,20 @@ function getCpuUsage() {
     totalIdle += cpu.times.idle;
   });
 
-  const idle = totalIdle / cpus.length;
-  const total = totalTick / cpus.length;
-  const usage = 100 - (idle / total * 100);
+  let usage = 0;
+
+  // Calculate delta-based usage if we have previous stats
+  if (prevCpuTimes) {
+    const deltaIdle = totalIdle - prevCpuTimes.idle;
+    const deltaTotal = totalTick - prevCpuTimes.total;
+
+    if (deltaTotal > 0) {
+      usage = 100 - (deltaIdle / deltaTotal * 100);
+    }
+  }
+
+  // Store current values for next calculation
+  prevCpuTimes = { idle: totalIdle, total: totalTick };
 
   return {
     usage: Math.round(usage * 10) / 10,
@@ -728,6 +742,77 @@ async function handleHomeDbStats(req, res) {
 }
 app.get('/api/home/db-stats', handleHomeDbStats);
 app.get('/status/api/home/db-stats', handleHomeDbStats);
+
+// ============ NEW PROXY ENDPOINTS ============
+
+// GPU history
+async function handleGpuHistory(req, res) {
+  const params = new URLSearchParams();
+  if (req.query.start) params.set('start', req.query.start);
+  if (req.query.end) params.set('end', req.query.end);
+  await proxyToHomeAgent('/history/gpu', res, params.toString());
+}
+app.get('/api/home/gpu-history', handleGpuHistory);
+app.get('/status/api/home/gpu-history', handleGpuHistory);
+
+// Network history
+async function handleNetworkHistory(req, res) {
+  const params = new URLSearchParams();
+  if (req.query.start) params.set('start', req.query.start);
+  if (req.query.end) params.set('end', req.query.end);
+  if (req.query.interface) params.set('interface', req.query.interface);
+  await proxyToHomeAgent('/history/network', res, params.toString());
+}
+app.get('/api/home/network-history', handleNetworkHistory);
+app.get('/status/api/home/network-history', handleNetworkHistory);
+
+// Container history
+async function handleContainerHistory(req, res) {
+  const params = new URLSearchParams();
+  if (req.query.start) params.set('start', req.query.start);
+  if (req.query.end) params.set('end', req.query.end);
+  if (req.query.name) params.set('name', req.query.name);
+  await proxyToHomeAgent('/history/containers', res, params.toString());
+}
+app.get('/api/home/container-history', handleContainerHistory);
+app.get('/status/api/home/container-history', handleContainerHistory);
+
+// Service health
+async function handleServiceHealth(req, res) {
+  await proxyToHomeAgent('/services/health', res);
+}
+app.get('/api/home/services', handleServiceHealth);
+app.get('/status/api/home/services', handleServiceHealth);
+
+// Service uptime
+async function handleServiceUptime(req, res) {
+  const params = new URLSearchParams();
+  if (req.query.days) params.set('days', req.query.days);
+  await proxyToHomeAgent('/services/uptime', res, params.toString());
+}
+app.get('/api/home/uptime', handleServiceUptime);
+app.get('/status/api/home/uptime', handleServiceUptime);
+
+// SMART disk health
+async function handleSmartHealth(req, res) {
+  await proxyToHomeAgent('/stats/smart', res);
+}
+app.get('/api/home/smart', handleSmartHealth);
+app.get('/status/api/home/smart', handleSmartHealth);
+
+// Disk predictions
+async function handleDiskPredictions(req, res) {
+  await proxyToHomeAgent('/stats/disk-predictions', res);
+}
+app.get('/api/home/disk-predictions', handleDiskPredictions);
+app.get('/status/api/home/disk-predictions', handleDiskPredictions);
+
+// Current network stats
+async function handleNetworkStats(req, res) {
+  await proxyToHomeAgent('/stats/network', res);
+}
+app.get('/api/home/network', handleNetworkStats);
+app.get('/status/api/home/network', handleNetworkStats);
 
 // Serve index.html for all other routes
 app.get('*', (req, res) => {

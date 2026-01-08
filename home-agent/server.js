@@ -9,10 +9,20 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 const API_KEY = process.env.API_KEY || 'home-stats-key';
 
-// Collection intervals
-const METRICS_INTERVAL = 10000;  // 10 seconds for detailed metrics
-const PROCESS_INTERVAL = 60000; // 60 seconds for top processes
-const CLEANUP_INTERVAL = 3600000; // 1 hour for cleanup/aggregation
+// Collection intervals (configurable via environment variables)
+const METRICS_INTERVAL = parseInt(process.env.METRICS_INTERVAL) || 10000;  // Default 10 seconds
+const PROCESS_INTERVAL = parseInt(process.env.PROCESS_INTERVAL) || 60000; // Default 60 seconds
+const CONTAINER_INTERVAL = parseInt(process.env.CONTAINER_INTERVAL) || 60000; // Default 60 seconds
+const HEALTH_CHECK_INTERVAL = parseInt(process.env.HEALTH_CHECK_INTERVAL) || 60000; // Default 60 seconds
+const CLEANUP_INTERVAL = parseInt(process.env.CLEANUP_INTERVAL) || 3600000; // Default 1 hour
+
+// Configurable services for health checks
+const MONITORED_SERVICES = JSON.parse(process.env.MONITORED_SERVICES || '[]') || [
+  { name: 'Jellyfin', url: 'http://localhost:8096/health' },
+  { name: 'Nextcloud', url: 'http://localhost:8080/status.php' },
+  { name: 'Vaultwarden', url: 'http://localhost:8081/alive' },
+  { name: 'Ollama', url: 'http://localhost:11434/api/tags' }
+];
 
 app.use(cors());
 app.use(express.json());
@@ -31,7 +41,10 @@ function authenticate(req, res, next) {
   }
 }
 
-// Get CPU usage percentage (legacy - kept for compatibility)
+// Previous CPU stats for delta-based calculation
+let prevCpuTimes = null;
+
+// Get CPU usage percentage using delta-based measurement for accuracy
 function getCpuUsage() {
   const cpus = os.cpus();
   let totalIdle = 0;
@@ -44,9 +57,20 @@ function getCpuUsage() {
     totalIdle += cpu.times.idle;
   });
 
-  const idle = totalIdle / cpus.length;
-  const total = totalTick / cpus.length;
-  const usage = 100 - (idle / total * 100);
+  let usage = 0;
+
+  // Calculate delta-based usage if we have previous stats
+  if (prevCpuTimes) {
+    const deltaIdle = totalIdle - prevCpuTimes.idle;
+    const deltaTotal = totalTick - prevCpuTimes.total;
+
+    if (deltaTotal > 0) {
+      usage = 100 - (deltaIdle / deltaTotal * 100);
+    }
+  }
+
+  // Store current values for next calculation
+  prevCpuTimes = { idle: totalIdle, total: totalTick };
 
   return {
     usage: Math.round(usage * 10) / 10,
@@ -274,11 +298,16 @@ function getDetailedStats() {
 
 // Background metrics collection
 let lastProcessCollection = 0;
+let lastContainerCollection = 0;
+let lastHealthCheck = 0;
+let cachedServiceHealth = [];
 
 function collectMetrics() {
   try {
     const detailedMetrics = metrics.getDetailedMetrics();
     const basicStats = getSystemStats();
+    const networkStats = metrics.getNetworkStats();
+    const gpuInfo = metrics.getGpuInfo();
 
     // Merge for storage
     const fullMetrics = {
@@ -290,6 +319,16 @@ function collectMetrics() {
     // Store metrics
     db.insertMetrics(fullMetrics);
 
+    // Store network stats
+    if (networkStats && networkStats.length > 0) {
+      db.insertNetworkStats(networkStats);
+    }
+
+    // Store GPU stats
+    if (gpuInfo && gpuInfo.length > 0) {
+      db.insertGpuStats(gpuInfo);
+    }
+
     // Store processes less frequently
     const now = Date.now();
     if (now - lastProcessCollection >= PROCESS_INTERVAL) {
@@ -297,14 +336,54 @@ function collectMetrics() {
       lastProcessCollection = now;
     }
 
-    // Handle alerts
+    // Store container stats less frequently
+    if (now - lastContainerCollection >= CONTAINER_INTERVAL) {
+      const containers = metrics.getContainerStats();
+      if (containers && containers.length > 0) {
+        db.insertContainerStats(containers);
+      }
+      lastContainerCollection = now;
+    }
+
+    // Handle alerts and Discord notifications
     for (const bottleneck of detailedMetrics.bottlenecks) {
       db.insertAlert(bottleneck);
+      // Send Discord notification for critical alerts
+      if (bottleneck.severity === 'critical') {
+        db.sendDiscordAlert(bottleneck);
+      }
     }
     db.autoResolveAlerts(detailedMetrics.bottlenecks);
 
   } catch (error) {
     console.error('Error collecting metrics:', error.message);
+  }
+}
+
+// Service health check collection
+async function collectServiceHealth() {
+  try {
+    if (MONITORED_SERVICES.length === 0) return;
+
+    const results = await metrics.checkServiceHealth(MONITORED_SERVICES);
+    cachedServiceHealth = results;
+    db.insertServiceHealth(results);
+
+    // Alert on service failures
+    for (const result of results) {
+      if (result.status === 'down' || result.status === 'timeout') {
+        const alert = {
+          type: 'service_down',
+          severity: 'critical',
+          message: `Service ${result.name} is ${result.status}`,
+          recommendation: `Check if ${result.name} is running and accessible at ${result.url}`
+        };
+        db.insertAlert(alert);
+        db.sendDiscordAlert(alert);
+      }
+    }
+  } catch (error) {
+    console.error('Error checking service health:', error.message);
   }
 }
 
@@ -321,15 +400,37 @@ function runCleanup() {
 // Start background collection
 setInterval(collectMetrics, METRICS_INTERVAL);
 setInterval(runCleanup, CLEANUP_INTERVAL);
+setInterval(collectServiceHealth, HEALTH_CHECK_INTERVAL);
 
 // Initial collection after short delay
 setTimeout(collectMetrics, 2000);
+setTimeout(collectServiceHealth, 5000);
 
 // ============ ENDPOINTS ============
 
 // Health check (no auth required)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'home-stats-agent', version: '2.0.0' });
+});
+
+// Configuration endpoint - returns current refresh intervals
+app.get('/config', authenticate, (req, res) => {
+  res.json({
+    intervals: {
+      metrics: METRICS_INTERVAL,
+      process: PROCESS_INTERVAL,
+      container: CONTAINER_INTERVAL,
+      healthCheck: HEALTH_CHECK_INTERVAL,
+      cleanup: CLEANUP_INTERVAL
+    },
+    description: {
+      metrics: 'System stats collection interval (ms)',
+      process: 'Top processes collection interval (ms)',
+      container: 'Container stats collection interval (ms)',
+      healthCheck: 'Service health check interval (ms)',
+      cleanup: 'Data cleanup/aggregation interval (ms)'
+    }
+  });
 });
 
 // Stats endpoint - legacy format (requires auth)
@@ -455,6 +556,141 @@ app.get('/db/stats', authenticate, (req, res) => {
     res.json(stats);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get DB stats', message: error.message });
+  }
+});
+
+// ============ NEW ENDPOINTS ============
+
+// Network stats (current)
+app.get('/stats/network', authenticate, (req, res) => {
+  try {
+    const networkStats = metrics.getNetworkStats();
+    res.json(networkStats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get network stats', message: error.message });
+  }
+});
+
+// Network stats history
+app.get('/history/network', authenticate, (req, res) => {
+  try {
+    const end = parseInt(req.query.end) || Date.now();
+    const start = parseInt(req.query.start) || (end - 3600000);
+    const iface = req.query.interface || null;
+    const data = db.queryNetworkStats(start, end, iface);
+    res.json({ start, end, interface: iface, count: data.length, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to query network stats', message: error.message });
+  }
+});
+
+// Container stats history
+app.get('/history/containers', authenticate, (req, res) => {
+  try {
+    const end = parseInt(req.query.end) || Date.now();
+    const start = parseInt(req.query.start) || (end - 3600000);
+    const name = req.query.name || null;
+    const data = db.queryContainerStats(start, end, name);
+    res.json({ start, end, name, count: data.length, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to query container stats', message: error.message });
+  }
+});
+
+// GPU stats history
+app.get('/history/gpu', authenticate, (req, res) => {
+  try {
+    const end = parseInt(req.query.end) || Date.now();
+    const start = parseInt(req.query.start) || (end - 3600000);
+    const data = db.queryGpuStats(start, end);
+    res.json({ start, end, count: data.length, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to query GPU stats', message: error.message });
+  }
+});
+
+// Service health (current)
+app.get('/services/health', authenticate, (req, res) => {
+  try {
+    res.json({
+      services: cachedServiceHealth,
+      lastCheck: cachedServiceHealth[0]?.lastCheck || null
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get service health', message: error.message });
+  }
+});
+
+// Service health history
+app.get('/history/services', authenticate, (req, res) => {
+  try {
+    const end = parseInt(req.query.end) || Date.now();
+    const start = parseInt(req.query.start) || (end - 86400000); // Default 24h
+    const name = req.query.name || null;
+    const data = db.queryServiceHealth(start, end, name);
+    res.json({ start, end, name, count: data.length, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to query service health', message: error.message });
+  }
+});
+
+// Service uptime
+app.get('/services/uptime', authenticate, (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const uptimes = [];
+    for (const service of MONITORED_SERVICES) {
+      const uptime = db.getServiceUptime(service.name, days);
+      if (uptime) {
+        uptimes.push(uptime);
+      } else {
+        uptimes.push({ name: service.name, uptimePercent: null, totalChecks: 0 });
+      }
+    }
+    res.json(uptimes);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get service uptime', message: error.message });
+  }
+});
+
+// SMART disk health
+app.get('/stats/smart', authenticate, (req, res) => {
+  try {
+    const smartData = metrics.getSmartHealth();
+    res.json(smartData);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get SMART data', message: error.message });
+  }
+});
+
+// Disk predictions
+app.get('/stats/disk-predictions', authenticate, (req, res) => {
+  try {
+    const hostDisks = metrics.getHostDiskUsage();
+    const predictions = metrics.getDiskPredictions(hostDisks);
+    res.json({
+      disks: hostDisks,
+      predictions,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get disk predictions', message: error.message });
+  }
+});
+
+// Test Discord webhook
+app.post('/test/discord', authenticate, (req, res) => {
+  try {
+    const testAlert = {
+      type: 'test_alert',
+      severity: 'info',
+      message: 'Test alert from Home Server Monitor',
+      recommendation: 'This is a test notification. If you received this, Discord alerts are working!'
+    };
+    db.sendDiscordAlert(testAlert);
+    res.json({ success: true, message: 'Test alert sent' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to send test alert', message: error.message });
   }
 });
 
