@@ -16,10 +16,19 @@ const RETENTION = {
   metrics: 30 * 24 * 60 * 60 * 1000,      // 30 days
   cpu_cores: 30 * 24 * 60 * 60 * 1000,    // 30 days
   disk_io: 30 * 24 * 60 * 60 * 1000,      // 30 days
+  network_stats: 30 * 24 * 60 * 60 * 1000, // 30 days
+  container_stats: 7 * 24 * 60 * 60 * 1000, // 7 days
+  gpu_stats: 30 * 24 * 60 * 60 * 1000,    // 30 days
+  service_health: 7 * 24 * 60 * 60 * 1000, // 7 days
   top_processes: 7 * 24 * 60 * 60 * 1000, // 7 days
   alerts: 90 * 24 * 60 * 60 * 1000,       // 90 days
   hourly_summary: 365 * 24 * 60 * 60 * 1000 // 1 year
 };
+
+// Discord webhook configuration
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || null;
+let lastDiscordAlert = {};
+const DISCORD_COOLDOWN = 5 * 60 * 1000; // 5 minutes between same alert type
 
 let db = null;
 
@@ -146,6 +155,64 @@ function initialize() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_hourly_hour ON hourly_summary(hour_timestamp);
+
+    -- Network bandwidth stats
+    CREATE TABLE IF NOT EXISTS network_stats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp INTEGER NOT NULL,
+      interface TEXT NOT NULL,
+      rx_bytes_sec REAL,
+      tx_bytes_sec REAL,
+      rx_packets_sec REAL,
+      tx_packets_sec REAL,
+      rx_errors INTEGER,
+      tx_errors INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_network_timestamp ON network_stats(timestamp);
+
+    -- Container stats history
+    CREATE TABLE IF NOT EXISTS container_stats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      cpu REAL,
+      mem_percent REAL,
+      net_rx INTEGER,
+      net_tx INTEGER,
+      block_read INTEGER,
+      block_write INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_container_timestamp ON container_stats(timestamp);
+
+    -- GPU stats history
+    CREATE TABLE IF NOT EXISTS gpu_stats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp INTEGER NOT NULL,
+      gpu_index INTEGER,
+      name TEXT,
+      usage REAL,
+      memory_usage REAL,
+      temperature REAL,
+      power_draw REAL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_gpu_timestamp ON gpu_stats(timestamp);
+
+    -- Service health checks
+    CREATE TABLE IF NOT EXISTS service_health (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      url TEXT,
+      status TEXT,
+      status_code INTEGER,
+      response_time INTEGER,
+      error TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_service_health_timestamp ON service_health(timestamp);
   `);
 
   console.log('Database initialized at', DB_PATH);
@@ -496,6 +563,224 @@ function getDbStats() {
 }
 
 /**
+ * Insert network stats
+ */
+function insertNetworkStats(networkStats) {
+  if (!db || !networkStats || networkStats.length === 0) return;
+
+  const timestamp = Date.now();
+  const insert = db.prepare(`
+    INSERT INTO network_stats (timestamp, interface, rx_bytes_sec, tx_bytes_sec, rx_packets_sec, tx_packets_sec, rx_errors, tx_errors)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const stat of networkStats) {
+    insert.run(timestamp, stat.interface, stat.rxBytesPerSec, stat.txBytesPerSec, stat.rxPacketsPerSec, stat.txPacketsPerSec, stat.rxErrors, stat.txErrors);
+  }
+}
+
+/**
+ * Insert container stats
+ */
+function insertContainerStats(containers) {
+  if (!db || !containers || containers.length === 0) return;
+
+  const timestamp = Date.now();
+  const insert = db.prepare(`
+    INSERT INTO container_stats (timestamp, name, cpu, mem_percent, net_rx, net_tx, block_read, block_write)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const c of containers) {
+    insert.run(timestamp, c.name, c.cpu, c.memPercent, c.netRx || 0, c.netTx || 0, c.blockRead || 0, c.blockWrite || 0);
+  }
+}
+
+/**
+ * Insert GPU stats
+ */
+function insertGpuStats(gpus) {
+  if (!db || !gpus || gpus.length === 0) return;
+
+  const timestamp = Date.now();
+  const insert = db.prepare(`
+    INSERT INTO gpu_stats (timestamp, gpu_index, name, usage, memory_usage, temperature, power_draw)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const gpu of gpus) {
+    insert.run(timestamp, gpu.index, gpu.name, gpu.usage, gpu.memoryUsage, gpu.temperature, gpu.powerDraw);
+  }
+}
+
+/**
+ * Insert service health check results
+ */
+function insertServiceHealth(results) {
+  if (!db || !results || results.length === 0) return;
+
+  const timestamp = Date.now();
+  const insert = db.prepare(`
+    INSERT INTO service_health (timestamp, name, url, status, status_code, response_time, error)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const r of results) {
+    insert.run(timestamp, r.name, r.url, r.status, r.statusCode || null, r.responseTime || null, r.error || null);
+  }
+}
+
+/**
+ * Query network stats history
+ */
+function queryNetworkStats(start, end, iface = null) {
+  if (!db) return [];
+
+  if (iface) {
+    return db.prepare(`
+      SELECT * FROM network_stats WHERE timestamp >= ? AND timestamp <= ? AND interface = ? ORDER BY timestamp ASC
+    `).all(start, end, iface);
+  }
+
+  return db.prepare(`
+    SELECT * FROM network_stats WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC
+  `).all(start, end);
+}
+
+/**
+ * Query container stats history
+ */
+function queryContainerStats(start, end, name = null) {
+  if (!db) return [];
+
+  if (name) {
+    return db.prepare(`
+      SELECT * FROM container_stats WHERE timestamp >= ? AND timestamp <= ? AND name = ? ORDER BY timestamp ASC
+    `).all(start, end, name);
+  }
+
+  return db.prepare(`
+    SELECT * FROM container_stats WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC
+  `).all(start, end);
+}
+
+/**
+ * Query GPU stats history
+ */
+function queryGpuStats(start, end) {
+  if (!db) return [];
+
+  return db.prepare(`
+    SELECT * FROM gpu_stats WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC
+  `).all(start, end);
+}
+
+/**
+ * Query service health history
+ */
+function queryServiceHealth(start, end, name = null) {
+  if (!db) return [];
+
+  if (name) {
+    return db.prepare(`
+      SELECT * FROM service_health WHERE timestamp >= ? AND timestamp <= ? AND name = ? ORDER BY timestamp DESC
+    `).all(start, end, name);
+  }
+
+  return db.prepare(`
+    SELECT * FROM service_health WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC
+  `).all(start, end);
+}
+
+/**
+ * Get service uptime percentage
+ */
+function getServiceUptime(name, days = 30) {
+  if (!db) return null;
+
+  const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'healthy' THEN 1 ELSE 0 END) as healthy
+    FROM service_health
+    WHERE name = ? AND timestamp >= ?
+  `).get(name, cutoff);
+
+  if (!stats || stats.total === 0) return null;
+
+  return {
+    name,
+    days,
+    totalChecks: stats.total,
+    healthyChecks: stats.healthy,
+    uptimePercent: Math.round((stats.healthy / stats.total) * 10000) / 100
+  };
+}
+
+/**
+ * Send Discord webhook notification
+ */
+async function sendDiscordAlert(alert) {
+  if (!DISCORD_WEBHOOK) return;
+
+  const now = Date.now();
+  const lastSent = lastDiscordAlert[alert.type] || 0;
+
+  // Cooldown check
+  if (now - lastSent < DISCORD_COOLDOWN) return;
+
+  const colors = {
+    critical: 15158332, // Red
+    warning: 16776960,  // Yellow
+    info: 3447003       // Blue
+  };
+
+  const embed = {
+    title: `⚠️ ${alert.severity.toUpperCase()}: ${alert.type.replace(/_/g, ' ').toUpperCase()}`,
+    description: alert.message,
+    color: colors[alert.severity] || colors.info,
+    fields: [],
+    timestamp: new Date().toISOString(),
+    footer: { text: 'Home Server Monitor' }
+  };
+
+  if (alert.recommendation) {
+    embed.fields.push({
+      name: '💡 Recommendation',
+      value: alert.recommendation,
+      inline: false
+    });
+  }
+
+  try {
+    const https = require('https');
+    const url = new URL(DISCORD_WEBHOOK);
+
+    const payload = JSON.stringify({ embeds: [embed] });
+
+    const req = https.request({
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    });
+
+    req.on('error', (e) => console.error('Discord webhook error:', e.message));
+    req.write(payload);
+    req.end();
+
+    lastDiscordAlert[alert.type] = now;
+    console.log('Discord alert sent:', alert.type);
+  } catch (error) {
+    console.error('Failed to send Discord alert:', error.message);
+  }
+}
+
+/**
  * Close database connection
  */
 function close() {
@@ -520,5 +805,16 @@ module.exports = {
   aggregateHourly,
   cleanup,
   getDbStats,
-  close
+  close,
+  // New exports
+  insertNetworkStats,
+  insertContainerStats,
+  insertGpuStats,
+  insertServiceHealth,
+  queryNetworkStats,
+  queryContainerStats,
+  queryGpuStats,
+  queryServiceHealth,
+  getServiceUptime,
+  sendDiscordAlert
 };

@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>System Status | basedsecurity.net</title>
+  <title>System Monitor | basedsecurity.net</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F7E2;</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -13,90 +16,240 @@
     }
 
     :root {
-      --bg-primary: #0a0a0a;
-      --bg-secondary: #111111;
-      --bg-tertiary: #1a1a1a;
-      --text-primary: #ffffff;
-      --text-secondary: #888888;
-      --text-muted: #555555;
-      --border-color: #222222;
-      --green: #00d26a;
-      --green-dim: rgba(0, 210, 106, 0.1);
-      --yellow: #ffc107;
-      --yellow-dim: rgba(255, 193, 7, 0.1);
-      --red: #ff4757;
-      --red-dim: rgba(255, 71, 87, 0.1);
-      --blue: #3b82f6;
+      /* Dark Theme (Default) */
+      --bg-void: #000000;
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --bg-hover: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+      --border-color: #30363d;
+
+      /* Status Colors */
+      --green: #00ff9f;
+      --green-dim: rgba(0, 255, 159, 0.1);
+      --yellow: #ffcc00;
+      --yellow-dim: rgba(255, 204, 0, 0.1);
+      --red: #ff4444;
+      --red-dim: rgba(255, 68, 68, 0.1);
+      --blue: #58a6ff;
+      --blue-dim: rgba(88, 166, 255, 0.1);
+      --purple: #bc8cff;
+
+      /* Resource Colors (htop inspired) */
+      --cpu-color: #58a6ff;
+      --memory-color: #7ee787;
+      --disk-color: #ffa657;
+      --gpu-color: #f778ba;
+      --network-rx: #7ee787;
+      --network-tx: #ff7b72;
+
+      /* Terminal */
+      --terminal-green: #00ff9f;
+      --terminal-cursor: #00ff9f;
+
+      /* Fonts */
+      --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --font-system: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    [data-theme="light"] {
+      --bg-void: #ffffff;
+      --bg-primary: #f6f8fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f6f8fa;
+      --bg-hover: #eaeef2;
+      --text-primary: #1f2328;
+      --text-secondary: #656d76;
+      --text-muted: #8b949e;
+      --border-color: #d0d7de;
+      --terminal-green: #1a7f37;
+      --terminal-cursor: #1a7f37;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: var(--bg-primary);
+      font-family: var(--font-system);
+      background: var(--bg-void);
       color: var(--text-primary);
       min-height: 100vh;
       line-height: 1.6;
     }
 
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 40px 20px;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-
-    .logo {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--text-primary);
-      margin-bottom: 8px;
-      letter-spacing: -0.5px;
-    }
-
-    .logo span {
-      color: var(--green);
-    }
-
-    header p {
-      color: var(--text-secondary);
-      font-size: 0.95rem;
-    }
-
-    .overall-status {
+    /* Window Chrome */
+    .window-chrome {
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 32px;
-      margin-bottom: 32px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .window-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .window-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      cursor: default;
+    }
+
+    .window-btn.close { background: #ff5f57; }
+    .window-btn.minimize { background: #febc2e; }
+    .window-btn.maximize { background: #28c840; }
+
+    .window-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+    }
+
+    .window-title .prompt {
+      color: var(--terminal-green);
+    }
+
+    .window-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    /* ASCII Banner */
+    .ascii-banner {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      line-height: 1.2;
+      color: var(--terminal-green);
       text-align: center;
+      padding: 20px;
+      white-space: pre;
+      overflow-x: auto;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    @media (max-width: 600px) {
+      .ascii-banner {
+        font-size: 6px;
+        padding: 12px;
+      }
+    }
+
+    /* Theme & Sound Controls */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--blue);
+    }
+
+    .control-btn.active {
+      background: var(--blue-dim);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .control-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* Overall Status */
+    .status-hero {
+      text-align: center;
+      padding: 32px 24px;
     }
 
     .status-indicator {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
-      font-size: 1.5rem;
-      font-weight: 600;
+      gap: 16px;
+      font-size: 1.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
     }
 
     .status-dot {
-      width: 16px;
-      height: 16px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       animation: pulse 2s infinite;
     }
 
-    .status-dot.operational { background: var(--green); }
+    .status-dot.operational { background: var(--green); box-shadow: 0 0 20px var(--green); }
     .status-dot.degraded { background: var(--yellow); animation: none; }
     .status-dot.major_outage { background: var(--red); animation: none; }
     .status-dot.loading { background: var(--text-muted); animation: blink 1s infinite; }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 210, 106, 0.4); }
-      50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(0, 210, 106, 0); }
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 159, 0.4); }
+      50% { opacity: 0.9; box-shadow: 0 0 0 12px rgba(0, 255, 159, 0); }
     }
 
     @keyframes blink {
@@ -104,61 +257,274 @@
       50% { opacity: 0.3; }
     }
 
-    .last-updated {
-      color: var(--text-muted);
-      font-size: 0.85rem;
+    .status-meta {
       margin-top: 12px;
-    }
-
-    .category {
-      margin-bottom: 24px;
-    }
-
-    .category-header {
       font-size: 0.85rem;
-      font-weight: 600;
       color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .refresh-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .refresh-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--blue);
+    }
+
+    .refresh-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .refresh-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .refresh-btn.loading svg {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .auto-refresh input[type="checkbox"] {
+      accent-color: var(--green);
+      width: 16px;
+      height: 16px;
+    }
+
+    .auto-refresh select {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* Resource Gauges */
+    .gauges-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      padding: 24px;
+    }
+
+    .gauge-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .gauge-svg {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 12px;
+    }
+
+    .gauge-bg {
+      fill: none;
+      stroke: var(--bg-hover);
+      stroke-width: 8;
+    }
+
+    .gauge-fill {
+      fill: none;
+      stroke-width: 8;
+      stroke-linecap: round;
+      transform: rotate(-90deg);
+      transform-origin: center;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    .gauge-fill.cpu { stroke: var(--cpu-color); }
+    .gauge-fill.memory { stroke: var(--memory-color); }
+    .gauge-fill.disk { stroke: var(--disk-color); }
+    .gauge-fill.gpu { stroke: var(--gpu-color); }
+
+    .gauge-fill.warning { stroke: var(--yellow); }
+    .gauge-fill.critical { stroke: var(--red); }
+
+    .gauge-value {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .gauge-value.good { color: var(--green); }
+    .gauge-value.warning { color: var(--yellow); }
+    .gauge-value.critical { color: var(--red); }
+
+    .gauge-label {
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 12px;
-      padding-left: 4px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
     }
 
-    .services-list {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      overflow: hidden;
+    .gauge-details {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
     }
 
-    .service-item {
+    /* htop-style CPU Cores */
+    .cpu-cores-section {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .section-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
+      margin-bottom: 16px;
+      font-family: var(--font-mono);
+    }
+
+    .section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .section-badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      background: var(--bg-hover);
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    .cpu-cores-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 8px;
+    }
+
+    .cpu-core-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .cpu-core-label {
+      min-width: 32px;
+      color: var(--text-muted);
+    }
+
+    .cpu-core-progress {
+      flex: 1;
+      height: 12px;
+      background: var(--bg-primary);
+      border-radius: 2px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .cpu-core-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+      display: flex;
+    }
+
+    .cpu-user { background: var(--cpu-color); }
+    .cpu-system { background: var(--purple); }
+    .cpu-iowait { background: var(--red); }
+
+    .cpu-core-value {
+      min-width: 40px;
+      text-align: right;
+      color: var(--text-primary);
+    }
+
+    /* Services Table */
+    .services-section {
+      margin-top: 24px;
+    }
+
+    .services-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    .services-table th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
       border-bottom: 1px solid var(--border-color);
-      transition: background 0.2s;
     }
 
-    .service-item:last-child {
-      border-bottom: none;
+    .services-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
     }
 
-    .service-item:hover {
+    .services-table tr:hover td {
       background: var(--bg-tertiary);
     }
 
-    .service-info {
-      flex: 1;
+    .service-name-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
     .service-name {
       font-weight: 600;
-      font-size: 0.95rem;
-      margin-bottom: 2px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      color: var(--text-primary);
     }
 
     .service-name a {
@@ -170,86 +536,18 @@
       color: var(--blue);
     }
 
-    .external-icon {
-      width: 12px;
-      height: 12px;
-      opacity: 0.5;
-    }
-
-    .service-description {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-
-    .service-error {
-      margin-top: 8px;
-      padding: 10px 12px;
-      background: var(--bg-tertiary);
-      border-radius: 6px;
-      border-left: 3px solid var(--red);
-      font-size: 0.8rem;
-    }
-
-    .service-error.degraded {
-      border-left-color: var(--yellow);
-    }
-
-    .service-error-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--red);
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .service-error.degraded .service-error-header {
-      color: var(--yellow);
-    }
-
-    .service-error-message {
-      color: var(--text-secondary);
-      word-break: break-word;
-    }
-
-    .service-error-details {
-      margin-top: 6px;
-      padding-top: 6px;
-      border-top: 1px solid var(--border-color);
-      font-family: 'SF Mono', Monaco, monospace;
+    .service-desc {
       font-size: 0.75rem;
       color: var(--text-muted);
-      word-break: break-all;
-      max-height: 80px;
-      overflow-y: auto;
-    }
-
-    .service-error-icon {
-      width: 14px;
-      height: 14px;
-    }
-
-    .service-status {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .response-time {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      font-family: 'SF Mono', Monaco, monospace;
-      min-width: 60px;
-      text-align: right;
     }
 
     .status-badge {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 4px 12px;
       border-radius: 20px;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 500;
     }
 
@@ -275,30 +573,201 @@
       background: currentColor;
     }
 
-    .incident-history {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 24px;
-      margin-top: 32px;
+    .response-time {
+      color: var(--text-secondary);
     }
 
-    .incident-header {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 16px;
+    .response-time.fast { color: var(--green); }
+    .response-time.medium { color: var(--yellow); }
+    .response-time.slow { color: var(--red); }
+
+    /* Embedded Log Viewer */
+    .log-viewer {
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-color);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .log-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+    }
+
+    .log-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    .log-title .blink {
+      animation: blink 1s infinite;
+    }
+
+    .log-entries {
+      padding: 12px 16px;
+    }
+
+    .log-entry {
+      display: flex;
+      gap: 12px;
+      padding: 2px 0;
+      color: var(--text-secondary);
+    }
+
+    .log-time {
+      color: var(--text-muted);
+      min-width: 80px;
+    }
+
+    .log-level {
+      min-width: 50px;
+    }
+
+    .log-level.info { color: var(--blue); }
+    .log-level.success { color: var(--green); }
+    .log-level.warn { color: var(--yellow); }
+    .log-level.error { color: var(--red); }
+
+    .log-message {
+      flex: 1;
+    }
+
+    /* Command Palette */
+    .command-palette-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 15vh;
+    }
+
+    .command-palette-overlay.open {
+      display: flex;
+    }
+
+    .command-palette {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .command-input-wrapper {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      gap: 12px;
+    }
+
+    .command-prompt {
+      color: var(--terminal-green);
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+    }
+
+    .command-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .command-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .command-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .command-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .command-item:hover,
+    .command-item.selected {
+      background: var(--bg-tertiary);
+    }
+
+    .command-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .command-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--text-muted);
+    }
+
+    .command-name {
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+    }
+
+    .command-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .command-shortcut {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Incidents */
+    .incidents-section {
+      margin-top: 24px;
+    }
+
+    .incident-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      background: var(--bg-tertiary);
     }
 
     .incident-count {
-      font-size: 0.8rem;
-      font-weight: 500;
-      padding: 2px 8px;
+      font-size: 0.75rem;
+      padding: 2px 10px;
       border-radius: 10px;
-      background: var(--bg-tertiary);
+      background: var(--bg-hover);
       color: var(--text-secondary);
+      font-family: var(--font-mono);
     }
 
     .incident-count.active {
@@ -306,29 +775,19 @@
       color: var(--red);
     }
 
-    .no-incidents {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-    }
-
     .incident-list {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+      padding: 16px;
     }
 
     .incident-item {
       border: 1px solid var(--border-color);
       border-radius: 8px;
+      margin-bottom: 12px;
       overflow: hidden;
     }
 
     .incident-item.active {
       border-color: var(--red);
-    }
-
-    .incident-item.resolved {
-      opacity: 0.7;
     }
 
     .incident-title-bar {
@@ -338,18 +797,20 @@
       padding: 12px 16px;
       background: var(--bg-tertiary);
       cursor: pointer;
+      transition: background 0.2s;
     }
 
     .incident-title-bar:hover {
-      background: var(--bg-primary);
+      background: var(--bg-hover);
     }
 
     .incident-title {
       display: flex;
       align-items: center;
       gap: 10px;
-      font-weight: 600;
+      font-family: var(--font-mono);
       font-size: 0.9rem;
+      font-weight: 600;
     }
 
     .incident-status-dot {
@@ -365,76 +826,17 @@
     .incident-time {
       font-size: 0.8rem;
       color: var(--text-muted);
+      font-family: var(--font-mono);
     }
 
     .incident-details {
       padding: 16px;
       display: none;
+      border-top: 1px solid var(--border-color);
     }
 
     .incident-item.expanded .incident-details {
       display: block;
-    }
-
-    .incident-meta {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 12px;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-    }
-
-    .incident-updates {
-      border-left: 2px solid var(--border-color);
-      padding-left: 16px;
-      margin-left: 4px;
-    }
-
-    .incident-update {
-      position: relative;
-      padding-bottom: 12px;
-    }
-
-    .incident-update:last-child {
-      padding-bottom: 0;
-    }
-
-    .incident-update::before {
-      content: '';
-      position: absolute;
-      left: -21px;
-      top: 6px;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--bg-secondary);
-      border: 2px solid var(--text-muted);
-    }
-
-    .incident-update.operational::before {
-      border-color: var(--green);
-      background: var(--green);
-    }
-
-    .incident-update.major_outage::before {
-      border-color: var(--red);
-      background: var(--red);
-    }
-
-    .incident-update.degraded::before {
-      border-color: var(--yellow);
-      background: var(--yellow);
-    }
-
-    .incident-update-time {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .incident-update-message {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
     }
 
     .expand-icon {
@@ -448,13 +850,13 @@
       transform: rotate(180deg);
     }
 
+    /* Footer */
     footer {
       text-align: center;
-      margin-top: 48px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border-color);
+      padding: 24px;
       color: var(--text-muted);
       font-size: 0.85rem;
+      border-top: 1px solid var(--border-color);
     }
 
     footer a {
@@ -463,798 +865,507 @@
     }
 
     footer a:hover {
-      color: var(--text-primary);
+      color: var(--blue);
     }
 
-    .refresh-btn {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      color: var(--text-secondary);
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+    /* Servers Grid */
+    .servers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+      margin-top: 24px;
     }
 
-    .refresh-btn:hover {
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      border-color: var(--text-muted);
+    @media (max-width: 500px) {
+      .servers-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
-    .refresh-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .refresh-btn svg {
-      width: 14px;
-      height: 14px;
-    }
-
-    .refresh-btn.loading svg {
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    .auto-refresh {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-
-    .auto-refresh input[type="checkbox"] {
-      accent-color: var(--green);
-    }
-
-    .auto-refresh select {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      color: var(--text-primary);
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-
-    .auto-refresh select:hover {
-      border-color: var(--blue);
-    }
-
-    .auto-refresh select:focus {
-      outline: none;
-      border-color: var(--blue);
-    }
-
-    .error-message {
-      background: var(--red-dim);
-      border: 1px solid rgba(255, 71, 87, 0.3);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
-      color: var(--red);
-      text-align: center;
-    }
-
-    /* System Stats Styles */
-    .system-stats {
+    .server-card {
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 32px;
-    }
-
-    .system-stats-header {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .system-hostname {
-      font-size: 0.8rem;
-      font-weight: 500;
-      padding: 2px 10px;
-      border-radius: 10px;
-      background: var(--bg-tertiary);
-      color: var(--text-secondary);
-      font-family: 'SF Mono', Monaco, monospace;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      padding: 16px;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .stat-value.good { color: var(--green); }
-    .stat-value.warning { color: var(--yellow); }
-    .stat-value.critical { color: var(--red); }
-
-    .stat-details {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-    }
-
-    .stat-details.docker-mem {
-      font-size: 0.75rem;
-      color: var(--blue);
-      margin-top: 2px;
-    }
-
-    .bar-legend {
-      display: flex;
-      gap: 12px;
-      margin-top: 6px;
-      font-size: 0.7rem;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      color: var(--text-secondary);
-    }
-
-    .legend-color {
-      width: 8px;
-      height: 8px;
-      border-radius: 2px;
-    }
-
-    .legend-color.used {
-      background: var(--green);
-    }
-
-    .legend-color.docker {
-      background: var(--blue);
-    }
-
-    .stat-bar {
-      height: 6px;
-      background: var(--bg-primary);
-      border-radius: 3px;
-      margin-top: 8px;
       overflow: hidden;
     }
 
-    .stat-bar.layered {
-      position: relative;
-      height: 10px;
-    }
-
-    .stat-bar-fill {
-      height: 100%;
-      border-radius: 3px;
-      transition: width 0.3s ease;
-    }
-
-    .stat-bar.layered .stat-bar-fill {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
-    .stat-bar-docker {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      background: var(--blue);
-      border-radius: 3px;
-      transition: width 0.3s ease;
-      opacity: 0.9;
-    }
-
-    .stat-bar-fill.good { background: var(--green); }
-    .stat-bar-fill.warning { background: var(--yellow); }
-    .stat-bar-fill.critical { background: var(--red); }
-
-    /* Storage section - full width below stats grid */
-    .storage-section {
-      background: var(--bg-tertiary);
-      border-radius: 8px;
+    .server-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       padding: 16px;
-      margin-top: 16px;
-    }
-
-    .storage-header {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-
-    .disks-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
-    }
-
-    .disk-item {
-      background: var(--bg-primary);
-      border-radius: 6px;
-      padding: 12px;
-    }
-
-    .disk-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 6px;
-    }
-
-    .disk-name {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .disk-label {
-      font-size: 0.65rem;
-      color: var(--text-muted);
-      display: block;
-      margin-top: 2px;
-    }
-
-    .disk-usage {
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-
-    .disk-usage.good { color: var(--green); }
-    .disk-usage.warning { color: var(--yellow); }
-    .disk-usage.critical { color: var(--red); }
-
-    .disk-details {
-      font-size: 0.7rem;
-      color: var(--text-secondary);
-      margin-bottom: 6px;
-    }
-
-    .disk-item .stat-bar {
-      margin-top: 6px;
-      height: 4px;
-    }
-
-    .load-averages {
-      display: flex;
-      gap: 16px;
-      font-size: 0.85rem;
-    }
-
-    .load-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .load-label {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-    }
-
-    .load-value {
-      font-weight: 600;
-      font-family: 'SF Mono', Monaco, monospace;
-    }
-
-    .containers-section {
-      margin-top: 20px;
-      border-top: 1px solid var(--border-color);
-      padding-top: 16px;
-    }
-
-    .containers-header {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .container-count {
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      border-radius: 10px;
       background: var(--bg-tertiary);
-      color: var(--text-muted);
-    }
-
-    .containers-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 8px;
-    }
-
-    .container-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      background: var(--bg-tertiary);
-      border-radius: 6px;
-      font-size: 0.85rem;
-    }
-
-    .container-name {
-      font-family: 'SF Mono', Monaco, monospace;
-      color: var(--text-primary);
-      font-size: 0.8rem;
-    }
-
-    .container-stats {
-      display: flex;
-      gap: 12px;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      font-family: 'SF Mono', Monaco, monospace;
-    }
-
-    /* Server Stats Container */
-    #servers-stats-container {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .server-title {
       font-weight: 600;
-      color: var(--text-primary);
+      font-family: var(--font-mono);
     }
 
-    .server-unavailable {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 24px;
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
-
-    .unavailable-icon {
-      font-size: 1.2rem;
-      color: var(--yellow);
-    }
-
-    /* CPU Details Section */
-    .cpu-details-section {
-      margin-top: 16px;
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      padding: 16px;
-    }
-
-    .cpu-details-header {
+    .server-hostname {
       font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .cpu-model {
-      font-size: 0.7rem;
-      font-weight: 400;
-      text-transform: none;
-      letter-spacing: 0;
-      color: var(--text-secondary);
-      background: var(--bg-primary);
       padding: 2px 8px;
+      background: var(--bg-primary);
       border-radius: 4px;
-    }
-
-    .cpu-cores-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-      gap: 8px;
-    }
-
-    .cpu-core-item {
-      background: var(--bg-primary);
-      border-radius: 6px;
-      padding: 10px;
-      text-align: center;
-    }
-
-    .cpu-core-label {
-      font-size: 0.65rem;
       color: var(--text-muted);
-      text-transform: uppercase;
-      margin-bottom: 4px;
+      font-family: var(--font-mono);
     }
 
-    .cpu-core-value {
-      font-size: 1.1rem;
-      font-weight: 700;
-      font-family: 'SF Mono', Monaco, monospace;
-    }
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 16px 12px;
+      }
 
-    .cpu-core-value.good { color: var(--green); }
-    .cpu-core-value.warning { color: var(--yellow); }
-    .cpu-core-value.critical { color: var(--red); }
+      .window-titlebar {
+        padding: 10px 12px;
+        font-size: 0.75rem;
+      }
 
-    .cpu-core-bar {
-      height: 3px;
-      background: var(--bg-secondary);
-      border-radius: 2px;
-      margin-top: 6px;
-      overflow: hidden;
-    }
-
-    .cpu-core-bar-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.3s ease;
-    }
-
-    .cpu-core-bar-fill.good { background: var(--green); }
-    .cpu-core-bar-fill.warning { background: var(--yellow); }
-    .cpu-core-bar-fill.critical { background: var(--red); }
-
-    /* GPU Section Styles */
-    .gpu-section {
-      margin-top: 16px;
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      padding: 16px;
-    }
-
-    .gpu-header {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .gpu-count {
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: var(--bg-primary);
-      color: var(--text-secondary);
-      text-transform: none;
-      letter-spacing: 0;
-    }
-
-    .gpu-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .gpu-card {
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      padding: 16px;
-    }
-
-    .gpu-name {
-      font-weight: 600;
-      font-size: 0.9rem;
-      margin-bottom: 12px;
-      color: var(--text-primary);
-    }
-
-    .gpu-stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: 12px;
-    }
-
-    .gpu-stat {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .gpu-stat-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .gpu-stat-value {
-      font-size: 1.1rem;
-      font-weight: 600;
-      font-family: 'SF Mono', Monaco, monospace;
-    }
-
-    .gpu-stat-value.good { color: var(--green); }
-    .gpu-stat-value.warning { color: var(--yellow); }
-    .gpu-stat-value.critical { color: var(--red); }
-
-    .gpu-bar {
-      height: 4px;
-      background: var(--bg-primary);
-      border-radius: 2px;
-      margin-top: 6px;
-      overflow: hidden;
-    }
-
-    .gpu-bar-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.3s ease;
-    }
-
-    .gpu-bar-fill.good { background: var(--green); }
-    .gpu-bar-fill.warning { background: var(--yellow); }
-    .gpu-bar-fill.critical { background: var(--red); }
-
-    @media (max-width: 600px) {
-      .service-item {
+      .controls-bar {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+      }
+
+      .control-group {
+        justify-content: center;
+      }
+
+      .ascii-banner {
+        display: none;
+      }
+
+      .status-indicator {
+        font-size: 1.25rem;
+      }
+
+      .gauges-grid {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 16px;
         gap: 12px;
       }
 
-      .service-status {
-        width: 100%;
-        justify-content: space-between;
+      .gauge-svg {
+        width: 80px;
+        height: 80px;
       }
 
-      .stats-grid {
+      .gauge-value {
+        font-size: 1.5rem;
+      }
+
+      .cpu-cores-grid {
         grid-template-columns: 1fr;
       }
 
-      .disks-grid {
-        grid-template-columns: repeat(2, 1fr);
+      .services-table {
+        font-size: 0.75rem;
       }
 
-      .containers-list {
+      .services-table th,
+      .services-table td {
+        padding: 10px 12px;
+      }
+
+      .servers-grid {
         grid-template-columns: 1fr;
+      }
+
+      .refresh-controls {
+        flex-direction: column;
+        gap: 12px;
       }
     }
 
-    @media (max-width: 400px) {
-      .disks-grid {
+    @media (max-width: 480px) {
+      .gauges-grid {
         grid-template-columns: 1fr;
       }
+
+      .gauge-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        text-align: left;
+      }
+
+      .gauge-svg {
+        width: 60px;
+        height: 60px;
+        margin: 0;
+      }
+
+      .gauge-value {
+        font-size: 1.25rem;
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-hover);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
     }
   </style>
 </head>
 <body>
+  <!-- Command Palette -->
+  <div class="command-palette-overlay" id="command-palette">
+    <div class="command-palette">
+      <div class="command-input-wrapper">
+        <span class="command-prompt">&gt;</span>
+        <input type="text" class="command-input" id="command-input" placeholder="Type a command..." autocomplete="off">
+      </div>
+      <div class="command-list" id="command-list">
+        <div class="command-item" data-command="refresh">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            <div>
+              <div class="command-name">Refresh</div>
+              <div class="command-desc">Refresh all data</div>
+            </div>
+          </div>
+          <span class="command-shortcut">R</span>
+        </div>
+        <div class="command-item" data-command="theme">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <div>
+              <div class="command-name">Toggle Theme</div>
+              <div class="command-desc">Switch between dark and light mode</div>
+            </div>
+          </div>
+          <span class="command-shortcut">T</span>
+        </div>
+        <div class="command-item" data-command="sound">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <div>
+              <div class="command-name">Toggle Sound</div>
+              <div class="command-desc">Enable or disable sound notifications</div>
+            </div>
+          </div>
+          <span class="command-shortcut">S</span>
+        </div>
+        <div class="command-item" data-command="audit">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            <div>
+              <div class="command-name">Open Audit Dashboard</div>
+              <div class="command-desc">View detailed system audit</div>
+            </div>
+          </div>
+          <span class="command-shortcut">A</span>
+        </div>
+        <div class="command-item" data-command="status">
+          <div class="command-item-left">
+            <svg class="command-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <div>
+              <div class="command-name">Check Status</div>
+              <div class="command-desc">View current system status</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
-    <header>
-      <div class="logo">based<span>security</span>.net</div>
-      <p>Service Status Dashboard</p>
-      <div style="margin-top: 12px;"><a href="audit.html" style="color: var(--blue); text-decoration: none; font-size: 0.9rem;">System Audit Dashboard &rarr;</a></div>
-    </header>
-
-    <div class="overall-status">
-      <div class="status-indicator">
-        <div class="status-dot loading" id="overall-dot"></div>
-        <span id="overall-text">Checking systems...</span>
-      </div>
-      <div class="last-updated">
-        <span id="last-updated">Fetching status...</span>
-        <button class="refresh-btn" id="refresh-btn" onclick="fetchStatus()">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 2v6h-6"></path>
-            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
-            <path d="M3 22v-6h6"></path>
-            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
-          </svg>
-          Refresh
-        </button>
-        <div class="auto-refresh">
-          <input type="checkbox" id="auto-refresh" checked>
-          <label for="auto-refresh">Auto-refresh</label>
-          <select id="refresh-interval">
-            <option value="10000">10s</option>
-            <option value="30000" selected>30s</option>
-            <option value="60000">1m</option>
-            <option value="300000">5m</option>
-          </select>
+    <div class="window-chrome">
+      <!-- Window Title Bar -->
+      <div class="window-titlebar">
+        <div class="window-controls">
+          <span class="window-btn close"></span>
+          <span class="window-btn minimize"></span>
+          <span class="window-btn maximize"></span>
         </div>
-      </div>
-    </div>
-
-    <div id="servers-stats-container">
-      <!-- Cloud Server Stats -->
-      <div class="system-stats" id="cloud-stats">
-        <div class="system-stats-header">
-          <span class="server-title">Cloud Server (AWS)</span>
-          <span class="system-hostname" id="cloud-hostname">Loading...</span>
+        <div class="window-title">
+          <span class="prompt">$</span> system-monitor --status
         </div>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">CPU Usage</div>
-            <div class="stat-value" id="cloud-cpu-value">--%</div>
-            <div class="stat-details" id="cloud-cpu-details">-- cores</div>
-            <div class="stat-bar"><div class="stat-bar-fill" id="cloud-cpu-bar" style="width: 0%"></div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Memory</div>
-            <div class="stat-value" id="cloud-mem-value">--%</div>
-            <div class="stat-details" id="cloud-mem-details">-- / --</div>
-            <div class="stat-bar"><div class="stat-bar-fill" id="cloud-mem-bar" style="width: 0%"></div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Uptime</div>
-            <div class="stat-value" id="cloud-uptime-value">--</div>
-            <div class="stat-details" id="cloud-uptime-details"></div>
-          </div>
-        </div>
-        <div class="containers-section" id="cloud-containers-section" style="display: none;">
-          <div class="containers-header">
-            Docker Containers
-            <span class="container-count" id="cloud-container-count">0</span>
-          </div>
-          <div class="containers-list" id="cloud-containers-list"></div>
+        <div class="window-actions">
+          <a href="audit.html" style="color: var(--blue); text-decoration: none; font-size: 0.8rem;">Audit Dashboard &rarr;</a>
         </div>
       </div>
 
-      <!-- Home Server Stats -->
-      <div class="system-stats" id="home-stats">
-        <div class="system-stats-header">
-          <span class="server-title">Home Server</span>
-          <span class="system-hostname" id="home-hostname">Loading...</span>
+      <!-- ASCII Banner -->
+      <div class="ascii-banner">
+ ____  _  _  ____  ____  ____  _  _    _  _   __   __ _  __  ____  __  ____
+/ ___)( \/ )/ ___)(_  _)(  __)( \/ )  ( \/ ) /  \ (  ( \(  )(_  _)/  \(  _ \
+\___ \ )  / \___ \  )(   ) _) / \/ \  / \/ \(  O )/    / )(   )( (  O ))   /
+(____/(__/  (____/ (__) (____)\_)(_/  \_)(_/ \__/ \_)__)(__) (__) \__/(__\_)
+      </div>
+
+      <!-- Controls Bar -->
+      <div class="controls-bar">
+        <div class="control-group">
+          <button class="control-btn" id="theme-toggle" onclick="toggleTheme()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <span id="theme-label">Dark</span>
+          </button>
+          <button class="control-btn" id="sound-toggle" onclick="toggleSound()">
+            <svg id="sound-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <span id="sound-label">Sound On</span>
+          </button>
         </div>
-        <div class="server-unavailable" id="home-unavailable" style="display: none;">
-          <span class="unavailable-icon">⚠</span>
-          <span>Home server stats unavailable</span>
+        <div class="control-group">
+          <button class="control-btn" onclick="openCommandPalette()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+            Commands
+            <kbd class="kbd">Ctrl+K</kbd>
+          </button>
         </div>
-        <div id="home-stats-content">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">CPU Usage</div>
-              <div class="stat-value" id="home-cpu-value">--%</div>
-              <div class="stat-details" id="home-cpu-details">-- cores</div>
-              <div class="stat-details" id="home-cpu-speed" style="color: var(--text-muted);"></div>
-              <div class="stat-bar"><div class="stat-bar-fill" id="home-cpu-bar" style="width: 0%"></div></div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Memory</div>
-              <div class="stat-value" id="home-mem-value">--%</div>
-              <div class="stat-details" id="home-mem-details">-- / --</div>
-              <div class="stat-details docker-mem" id="home-docker-mem">Docker: --</div>
-              <div class="stat-bar layered">
-                <div class="stat-bar-fill" id="home-mem-bar" style="width: 0%"></div>
-                <div class="stat-bar-docker" id="home-docker-bar" style="width: 0%"></div>
-              </div>
-              <div class="bar-legend">
-                <span class="legend-item"><span class="legend-color used"></span>System</span>
-                <span class="legend-item"><span class="legend-color docker"></span>Docker</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Uptime</div>
-              <div class="stat-value" id="home-uptime-value">--</div>
-              <div class="stat-details" id="home-uptime-details"></div>
-            </div>
+      </div>
+
+      <!-- Status Hero -->
+      <div class="status-hero">
+        <div class="status-indicator">
+          <div class="status-dot loading" id="overall-dot"></div>
+          <span id="overall-text">Checking systems...</span>
+        </div>
+        <div class="status-meta">
+          <span id="last-updated">Fetching status...</span>
+        </div>
+        <div class="refresh-controls">
+          <button class="refresh-btn" id="refresh-btn" onclick="fetchAll()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+            Refresh
+          </button>
+          <div class="auto-refresh">
+            <input type="checkbox" id="auto-refresh" checked>
+            <label for="auto-refresh">Auto-refresh</label>
+            <select id="refresh-interval">
+              <option value="5000">5s</option>
+              <option value="10000">10s</option>
+              <option value="30000" selected>30s</option>
+              <option value="60000">1m</option>
+            </select>
           </div>
-          <div class="storage-section">
-            <div class="storage-header">Storage</div>
-            <div class="disks-grid" id="home-disks-container">
-              <div class="disk-item">
-                <div class="disk-header">
-                  <div><span class="disk-name">--</span></div>
-                  <span class="disk-usage">--%</span>
-                </div>
-                <div class="disk-details">-- / --</div>
-                <div class="stat-bar"><div class="stat-bar-fill" style="width: 0%"></div></div>
-              </div>
-            </div>
+        </div>
+      </div>
+
+      <!-- Resource Gauges -->
+      <div class="gauges-grid" id="gauges-container">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- CPU Cores Section -->
+      <div class="cpu-cores-section" id="cpu-cores-section" style="display: none;">
+        <div class="section-header">
+          <span class="section-title">CPU Cores</span>
+          <span class="section-badge" id="cpu-model">--</span>
+        </div>
+        <div class="cpu-cores-grid" id="cpu-cores-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Log Viewer -->
+      <div class="log-viewer" id="log-viewer">
+        <div class="log-header">
+          <div class="log-title">
+            <span class="blink">&#9679;</span> System Logs
           </div>
-          <div class="cpu-details-section" id="home-cpu-section" style="display: none;">
-            <div class="cpu-details-header">
-              CPU Cores
-              <span class="cpu-model" id="home-cpu-model"></span>
-            </div>
-            <div class="cpu-cores-grid" id="home-cpu-cores"></div>
-          </div>
-          <div class="gpu-section" id="home-gpu-section" style="display: none;">
-            <div class="gpu-header">
-              GPU
-              <span class="gpu-count" id="home-gpu-count">0</span>
-            </div>
-            <div class="gpu-list" id="home-gpu-list"></div>
-          </div>
-          <div class="containers-section" id="home-containers-section" style="display: none;">
-            <div class="containers-header">
-              Docker Containers
-              <span class="container-count" id="home-container-count">0</span>
-            </div>
-            <div class="containers-list" id="home-containers-list"></div>
+          <button class="control-btn" onclick="clearLogs()" style="padding: 4px 8px; font-size: 0.7rem;">Clear</button>
+        </div>
+        <div class="log-entries" id="log-entries">
+          <div class="log-entry">
+            <span class="log-time">--:--:--</span>
+            <span class="log-level info">INFO</span>
+            <span class="log-message">Initializing system monitor...</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div id="error-container"></div>
-
-    <div id="services-container">
-      <!-- Services will be rendered here -->
+    <!-- Server Cards -->
+    <div class="servers-grid" id="servers-container">
+      <!-- Populated by JS -->
     </div>
 
-    <div class="incident-history">
+    <!-- Services Section -->
+    <div class="window-chrome services-section">
+      <div class="window-titlebar">
+        <div class="window-title">
+          <span class="prompt">$</span> services --list
+        </div>
+      </div>
+      <table class="services-table">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Response</th>
+          </tr>
+        </thead>
+        <tbody id="services-table-body">
+          <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading services...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Incidents Section -->
+    <div class="window-chrome incidents-section">
       <div class="incident-header">
-        <span>Recent Incidents</span>
+        <div class="window-title">
+          <span class="prompt">$</span> incidents --recent
+        </div>
         <span class="incident-count" id="incident-count">0</span>
       </div>
-      <div id="incidents-container">
-        <div class="no-incidents">Loading incidents...</div>
+      <div class="incident-list" id="incidents-container">
+        <div style="text-align: center; color: var(--text-muted); padding: 20px;">Loading incidents...</div>
       </div>
     </div>
 
     <footer>
-      <p>Powered by <a href="https://portfolio.basedsecurity.net" target="_blank">basedsecurity.net</a></p>
+      <p>Powered by <a href="https://portfolio.basedsecurity.net" target="_blank">basedsecurity.net</a> | Press <kbd class="kbd">Ctrl+K</kbd> for commands</p>
     </footer>
   </div>
 
   <script>
-    const categories = {
-      application: 'Applications',
-      microservice: 'Microservices',
-      infrastructure: 'Infrastructure',
-      homeserver: 'Home Server'
-    };
+    // ==================== State ====================
+    let soundEnabled = true;
+    let previousStatus = null;
+    const logs = [];
+    const maxLogs = 50;
 
-    const statusLabels = {
-      operational: 'Operational',
-      degraded: 'Degraded',
-      major_outage: 'Major Outage'
-    };
+    // ==================== Sound System ====================
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    const overallLabels = {
-      operational: 'All Systems Operational',
-      degraded: 'Partial System Outage',
-      major_outage: 'Major System Outage'
-    };
+    function playSound(type) {
+      if (!soundEnabled) return;
 
-    function formatResponseTime(ms) {
-      if (ms === null || ms === undefined) return '-';
-      if (ms < 1000) return `${ms}ms`;
-      return `${(ms / 1000).toFixed(2)}s`;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      switch(type) {
+        case 'success':
+          oscillator.frequency.value = 880;
+          gainNode.gain.value = 0.1;
+          break;
+        case 'warning':
+          oscillator.frequency.value = 440;
+          gainNode.gain.value = 0.15;
+          break;
+        case 'error':
+          oscillator.frequency.value = 220;
+          gainNode.gain.value = 0.2;
+          break;
+        case 'refresh':
+          oscillator.frequency.value = 1200;
+          gainNode.gain.value = 0.05;
+          break;
+      }
+
+      oscillator.type = 'sine';
+      oscillator.start();
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      oscillator.stop(audioContext.currentTime + 0.1);
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const label = document.getElementById('sound-label');
+      const icon = document.getElementById('sound-icon');
+      label.textContent = soundEnabled ? 'Sound On' : 'Sound Off';
+      document.getElementById('sound-toggle').classList.toggle('active', soundEnabled);
+      if (soundEnabled) playSound('refresh');
+      localStorage.setItem('soundEnabled', soundEnabled);
+    }
+
+    // ==================== Theme System ====================
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      document.getElementById('theme-label').textContent = newTheme === 'dark' ? 'Dark' : 'Light';
+      document.getElementById('theme-toggle').classList.toggle('active', newTheme === 'light');
+      localStorage.setItem('theme', newTheme);
+      addLog('info', `Theme changed to ${newTheme} mode`);
+    }
+
+    // ==================== Command Palette ====================
+    function openCommandPalette() {
+      document.getElementById('command-palette').classList.add('open');
+      document.getElementById('command-input').focus();
+    }
+
+    function closeCommandPalette() {
+      document.getElementById('command-palette').classList.remove('open');
+      document.getElementById('command-input').value = '';
+    }
+
+    function executeCommand(command) {
+      closeCommandPalette();
+      switch(command) {
+        case 'refresh':
+          fetchAll();
+          break;
+        case 'theme':
+          toggleTheme();
+          break;
+        case 'sound':
+          toggleSound();
+          break;
+        case 'audit':
+          window.location.href = 'audit.html';
+          break;
+        case 'status':
+          addLog('info', 'Current status: ' + document.getElementById('overall-text').textContent);
+          break;
+      }
+      addLog('info', `Executed command: ${command}`);
+    }
+
+    // ==================== Logging System ====================
+    function addLog(level, message) {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour12: false });
+
+      logs.unshift({ time, level, message });
+      if (logs.length > maxLogs) logs.pop();
+
+      renderLogs();
+    }
+
+    function renderLogs() {
+      const container = document.getElementById('log-entries');
+      container.innerHTML = logs.map(log => `
+        <div class="log-entry">
+          <span class="log-time">${log.time}</span>
+          <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+          <span class="log-message">${escapeHtml(log.message)}</span>
+        </div>
+      `).join('');
+    }
+
+    function clearLogs() {
+      logs.length = 0;
+      addLog('info', 'Logs cleared');
+    }
+
+    // ==================== Utility Functions ====================
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     function formatBytes(bytes) {
@@ -1265,450 +1376,190 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
+    function formatResponseTime(ms) {
+      if (ms === null || ms === undefined) return '-';
+      if (ms < 1000) return `${ms}ms`;
+      return `${(ms / 1000).toFixed(2)}s`;
+    }
+
     function getStatusClass(value, warning = 70, critical = 90) {
       if (value >= critical) return 'critical';
       if (value >= warning) return 'warning';
       return 'good';
     }
 
-    // Render stats for a single server (prefix = 'cloud' or 'home')
-    function renderServerStats(stats, prefix) {
-      if (!stats) return;
-
-      // Hostname
-      const hostnameEl = document.getElementById(`${prefix}-hostname`);
-      if (hostnameEl) {
-        hostnameEl.textContent = `${stats.hostname || 'Unknown'} (${stats.platform || '?'}/${stats.arch || '?'})`;
-      }
-
-      // CPU
-      const cpuUsage = stats.cpu?.usage || 0;
-      const cpuClass = getStatusClass(cpuUsage);
-      const cpuValueEl = document.getElementById(`${prefix}-cpu-value`);
-      if (cpuValueEl) {
-        cpuValueEl.textContent = `${cpuUsage}%`;
-        cpuValueEl.className = `stat-value ${cpuClass}`;
-      }
-      const cpuDetailsEl = document.getElementById(`${prefix}-cpu-details`);
-      if (cpuDetailsEl) {
-        const physCores = stats.cpu?.physicalCores || Math.floor((stats.cpu?.cores || 0) / 2);
-        const logCores = stats.cpu?.cores || stats.cpu?.perCore?.length || 0;
-        cpuDetailsEl.textContent = `${physCores} cores / ${logCores} threads`;
-      }
-      const cpuSpeedEl = document.getElementById(`${prefix}-cpu-speed`);
-      if (cpuSpeedEl && stats.cpu?.speed) {
-        cpuSpeedEl.textContent = `${stats.cpu.speed.toFixed(2)} GHz`;
-      }
-      const cpuBarEl = document.getElementById(`${prefix}-cpu-bar`);
-      if (cpuBarEl) {
-        cpuBarEl.style.width = `${cpuUsage}%`;
-        cpuBarEl.className = `stat-bar-fill ${cpuClass}`;
-      }
-
-      // CPU per-core details
-      const cpuSection = document.getElementById(`${prefix}-cpu-section`);
-      const cpuCoresEl = document.getElementById(`${prefix}-cpu-cores`);
-      const cpuModelEl = document.getElementById(`${prefix}-cpu-model`);
-      const perCore = stats.cpu?.perCore || [];
-
-      if (cpuSection && cpuCoresEl && perCore.length > 0) {
-        cpuSection.style.display = 'block';
-        if (cpuModelEl && stats.cpu?.model) {
-          cpuModelEl.textContent = stats.cpu.model;
-        }
-        cpuCoresEl.innerHTML = perCore.map((core, i) => {
-          const coreClass = getStatusClass(core.usage);
-          return `
-            <div class="cpu-core-item">
-              <div class="cpu-core-label">Core ${i}</div>
-              <div class="cpu-core-value ${coreClass}">${core.usage}%</div>
-              <div class="cpu-core-bar"><div class="cpu-core-bar-fill ${coreClass}" style="width: ${core.usage}%"></div></div>
-            </div>
-          `;
-        }).join('');
-      } else if (cpuSection) {
-        cpuSection.style.display = 'none';
-      }
-
-      // Memory
-      const memUsage = stats.memory?.usage || 0;
-      const memClass = getStatusClass(memUsage);
-      const memValueEl = document.getElementById(`${prefix}-mem-value`);
-      if (memValueEl) {
-        memValueEl.textContent = `${memUsage}%`;
-        memValueEl.className = `stat-value ${memClass}`;
-      }
-      const memDetailsEl = document.getElementById(`${prefix}-mem-details`);
-      if (memDetailsEl) {
-        memDetailsEl.textContent = `${formatBytes(stats.memory?.used || 0)} / ${formatBytes(stats.memory?.total || 0)}`;
-      }
-      // Docker memory (home server only)
-      const dockerMemEl = document.getElementById(`${prefix}-docker-mem`);
-      const dockerBarEl = document.getElementById(`${prefix}-docker-bar`);
-      if (dockerMemEl && stats.memory?.dockerUsed !== undefined) {
-        dockerMemEl.textContent = `Docker: ${formatBytes(stats.memory.dockerUsed)}`;
-        dockerMemEl.style.display = 'block';
-        // Calculate Docker usage as percentage of total
-        if (dockerBarEl && stats.memory.total > 0) {
-          const dockerPercent = (stats.memory.dockerUsed / stats.memory.total) * 100;
-          dockerBarEl.style.width = `${dockerPercent}%`;
-        }
-      } else if (dockerMemEl) {
-        dockerMemEl.style.display = 'none';
-        if (dockerBarEl) dockerBarEl.style.width = '0%';
-      }
-      const memBarEl = document.getElementById(`${prefix}-mem-bar`);
-      if (memBarEl) {
-        memBarEl.style.width = `${memUsage}%`;
-        memBarEl.className = `stat-bar-fill ${memClass}`;
-      }
-
-      // Disk(s) - handle multiple disks for home server
-      const disksContainer = document.getElementById(`${prefix}-disks-container`);
-      if (disksContainer && stats.disks && stats.disks.length > 0) {
-        // Render multiple disks in grid layout
-        disksContainer.innerHTML = stats.disks.map(disk => {
-          const diskClass = getStatusClass(disk.usage, 80, 95);
-          return `
-            <div class="disk-item">
-              <div class="disk-header">
-                <div>
-                  <span class="disk-name">${disk.mount}</span>
-                  ${disk.label ? `<span class="disk-label">${disk.label}</span>` : ''}
-                </div>
-                <span class="disk-usage ${diskClass}">${disk.usage}%</span>
-              </div>
-              <div class="disk-details">${formatBytes(disk.used)} / ${formatBytes(disk.total)}</div>
-              <div class="stat-bar"><div class="stat-bar-fill ${diskClass}" style="width: ${disk.usage}%"></div></div>
-            </div>
-          `;
-        }).join('');
-      } else if (disksContainer && stats.disk) {
-        // Fallback to single disk display
-        const diskUsage = stats.disk?.usage || 0;
-        const diskClass = getStatusClass(diskUsage, 80, 95);
-        disksContainer.innerHTML = `
-          <div class="disk-item">
-            <div class="disk-header">
-              <div><span class="disk-name">${stats.disk.mount || 'Disk'}</span></div>
-              <span class="disk-usage ${diskClass}">${diskUsage}%</span>
-            </div>
-            <div class="disk-details">${formatBytes(stats.disk?.used || 0)} / ${formatBytes(stats.disk?.total || 0)}</div>
-            <div class="stat-bar"><div class="stat-bar-fill ${diskClass}" style="width: ${diskUsage}%"></div></div>
-          </div>
-        `;
-      }
-
-      // Uptime
-      const uptimeValueEl = document.getElementById(`${prefix}-uptime-value`);
-      if (uptimeValueEl) {
-        uptimeValueEl.textContent = stats.uptimeFormatted || '--';
-        uptimeValueEl.className = 'stat-value good';
-      }
-
-      // Uptime details (OS info or load averages)
-      const uptimeDetailsEl = document.getElementById(`${prefix}-uptime-details`);
-      if (uptimeDetailsEl) {
-        if (stats.distro) {
-          // Windows - show OS info
-          uptimeDetailsEl.textContent = stats.distro;
-        } else if (stats.loadAverage) {
-          // Linux - show load averages
-          uptimeDetailsEl.innerHTML = `
-            <div class="load-averages">
-              <div class="load-item"><span class="load-label">1m</span><span class="load-value">${stats.loadAverage['1m'] || '--'}</span></div>
-              <div class="load-item"><span class="load-label">5m</span><span class="load-value">${stats.loadAverage['5m'] || '--'}</span></div>
-              <div class="load-item"><span class="load-label">15m</span><span class="load-value">${stats.loadAverage['15m'] || '--'}</span></div>
-            </div>
-          `;
-        }
-      }
-
-      // GPU stats (only for home server typically)
-      const gpus = stats.gpu || [];
-      const gpuSection = document.getElementById(`${prefix}-gpu-section`);
-      const gpuList = document.getElementById(`${prefix}-gpu-list`);
-      const gpuCount = document.getElementById(`${prefix}-gpu-count`);
-
-      if (gpuSection && gpuList && gpuCount) {
-        if (gpus.length > 0) {
-          gpuSection.style.display = 'block';
-          gpuCount.textContent = gpus.length;
-          gpuList.innerHTML = gpus.map(gpu => {
-            const usageClass = getStatusClass(gpu.usage);
-            const memClass = getStatusClass(gpu.memoryUsage);
-            const tempClass = gpu.temperature >= 85 ? 'critical' : (gpu.temperature >= 70 ? 'warning' : 'good');
-            return `
-              <div class="gpu-card">
-                <div class="gpu-name">${escapeHtml(gpu.name)}</div>
-                <div class="gpu-stats-grid">
-                  <div class="gpu-stat">
-                    <span class="gpu-stat-label">GPU Usage</span>
-                    <span class="gpu-stat-value ${usageClass}">${gpu.usage}%</span>
-                    <div class="gpu-bar"><div class="gpu-bar-fill ${usageClass}" style="width: ${gpu.usage}%"></div></div>
-                  </div>
-                  <div class="gpu-stat">
-                    <span class="gpu-stat-label">VRAM</span>
-                    <span class="gpu-stat-value ${memClass}">${gpu.memoryUsage}%</span>
-                    <div class="gpu-bar"><div class="gpu-bar-fill ${memClass}" style="width: ${gpu.memoryUsage}%"></div></div>
-                  </div>
-                  <div class="gpu-stat">
-                    <span class="gpu-stat-label">Temperature</span>
-                    <span class="gpu-stat-value ${tempClass}">${gpu.temperature}°C</span>
-                  </div>
-                  <div class="gpu-stat">
-                    <span class="gpu-stat-label">Power</span>
-                    <span class="gpu-stat-value">${gpu.powerDraw.toFixed(0)}W</span>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('');
-        } else {
-          gpuSection.style.display = 'none';
-        }
-      }
-
-      // Docker containers
-      const containers = stats.containers || [];
-      const containersSection = document.getElementById(`${prefix}-containers-section`);
-      const containersList = document.getElementById(`${prefix}-containers-list`);
-      const containerCount = document.getElementById(`${prefix}-container-count`);
-
-      if (containersSection && containersList && containerCount) {
-        if (containers.length > 0) {
-          containersSection.style.display = 'block';
-          containerCount.textContent = containers.length;
-          containersList.innerHTML = containers.map(c => `
-            <div class="container-item">
-              <span class="container-name">${escapeHtml(c.name)}</span>
-              <div class="container-stats">
-                <span>CPU: ${c.cpu.toFixed(1)}%</span>
-                <span>MEM: ${c.memPercent.toFixed(1)}%</span>
-              </div>
-            </div>
-          `).join('');
-        } else {
-          containersSection.style.display = 'none';
-        }
-      }
-    }
-
-    // Render all server stats (cloud + home)
-    function renderAllServerStats(data) {
-      if (!data) return;
-
-      // Render cloud server stats
-      if (data.cloud) {
-        renderServerStats(data.cloud, 'cloud');
-      }
-
-      // Render home server stats
-      const homeUnavailable = document.getElementById('home-unavailable');
-      const homeStatsContent = document.getElementById('home-stats-content');
-
-      if (data.home && data.home.available) {
-        if (homeUnavailable) homeUnavailable.style.display = 'none';
-        if (homeStatsContent) homeStatsContent.style.display = 'block';
-        renderServerStats(data.home, 'home');
-      } else {
-        if (homeUnavailable) homeUnavailable.style.display = 'flex';
-        if (homeStatsContent) homeStatsContent.style.display = 'none';
-      }
-    }
-
-    async function fetchSystemStats() {
-      try {
-        const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
-        const response = await fetch(basePath + '/api/servers');
-        if (response.ok) {
-          const stats = await response.json();
-          renderAllServerStats(stats);
-        }
-      } catch (error) {
-        console.error('Failed to fetch server stats:', error);
-      }
-    }
-
     function formatTime(isoString) {
-      const date = new Date(isoString);
-      return date.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+      return new Date(isoString).toLocaleTimeString('en-US', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
       });
     }
 
-    function getDiagnosis(service) {
-      const error = service.error || '';
-      const message = service.message || '';
+    // ==================== Gauge Rendering ====================
+    function createGaugeSVG(value, colorClass) {
+      const circumference = 2 * Math.PI * 45;
+      const offset = circumference - (value / 100) * circumference;
+      const statusClass = getStatusClass(value);
 
-      // Analyze error patterns and provide helpful diagnosis
-      if (error.includes('ENOTFOUND') || error.includes('getaddrinfo')) {
-        return 'DNS resolution failed - the hostname cannot be resolved. Check if the service is running and DNS is configured correctly.';
-      }
-      if (error.includes('ECONNREFUSED')) {
-        return 'Connection refused - the service is not accepting connections. The server may be down or the port may be blocked.';
-      }
-      if (error.includes('ETIMEDOUT') || error.includes('timeout') || message.includes('timeout')) {
-        return 'Request timed out - the service is not responding in time. May indicate high load or network issues.';
-      }
-      if (error.includes('ECONNRESET')) {
-        return 'Connection reset - the server closed the connection unexpectedly. May indicate a crash or restart.';
-      }
-      if (error.includes('SSL') || error.includes('TLS') || error.includes('certificate') || error.includes('EPROTO')) {
-        return 'SSL/TLS error - there is a problem with the secure connection. Check certificate validity and configuration.';
-      }
-      if (error.includes('401') || error.includes('Unauthorized')) {
-        return 'Authentication failed - credentials may be invalid or expired.';
-      }
-      if (error.includes('403') || error.includes('Forbidden')) {
-        return 'Access denied - the service is rejecting requests. Check permissions and firewall rules.';
-      }
-      if (error.includes('404') || message.includes('404')) {
-        return 'Endpoint not found - the health check URL may be incorrect or the service is misconfigured.';
-      }
-      if (error.includes('500') || error.includes('502') || error.includes('503')) {
-        return 'Server error - the service encountered an internal error. Check server logs for details.';
-      }
-      if (message === 'Service unavailable') {
-        return 'The service health check returned an error response. The service may be starting up or experiencing issues.';
-      }
-
-      return null;
-    }
-
-    function renderErrorDetails(service) {
-      const diagnosis = getDiagnosis(service);
-      const errorClass = service.status === 'degraded' ? 'degraded' : '';
-      const iconColor = service.status === 'degraded' ? 'var(--yellow)' : 'var(--red)';
-
-      let html = `<div class="service-error ${errorClass}">`;
-      html += `<div class="service-error-header">
-        <svg class="service-error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      return `
+        <svg class="gauge-svg" viewBox="0 0 100 100">
+          <circle class="gauge-bg" cx="50" cy="50" r="45"/>
+          <circle class="gauge-fill ${statusClass !== 'good' ? statusClass : colorClass}" cx="50" cy="50" r="45"
+                  stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
         </svg>
-        ${service.message || 'Unknown error'}
-      </div>`;
-
-      if (diagnosis) {
-        html += `<div class="service-error-message">${diagnosis}</div>`;
-      }
-
-      if (service.error) {
-        html += `<div class="service-error-details">${escapeHtml(service.error)}</div>`;
-      }
-
-      html += '</div>';
-      return html;
+      `;
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    function renderGauges(cloudStats, homeStats) {
+      const container = document.getElementById('gauges-container');
+      const gauges = [];
+
+      // Cloud CPU
+      if (cloudStats?.cpu) {
+        const cpu = cloudStats.cpu.usage || 0;
+        gauges.push({
+          label: 'Cloud CPU',
+          value: cpu,
+          color: 'cpu',
+          details: `${cloudStats.cpu.cores || 0} cores`
+        });
+      }
+
+      // Cloud Memory
+      if (cloudStats?.memory) {
+        const mem = cloudStats.memory.usage || 0;
+        gauges.push({
+          label: 'Cloud Memory',
+          value: mem,
+          color: 'memory',
+          details: `${formatBytes(cloudStats.memory.used || 0)} / ${formatBytes(cloudStats.memory.total || 0)}`
+        });
+      }
+
+      // Home CPU
+      if (homeStats?.cpu) {
+        const cpu = homeStats.cpu.usage || 0;
+        gauges.push({
+          label: 'Home CPU',
+          value: cpu,
+          color: 'cpu',
+          details: `${homeStats.cpu.cores || 0} threads`
+        });
+      }
+
+      // Home Memory
+      if (homeStats?.memory) {
+        const mem = homeStats.memory.usage || 0;
+        gauges.push({
+          label: 'Home Memory',
+          value: mem,
+          color: 'memory',
+          details: `${formatBytes(homeStats.memory.used || 0)} / ${formatBytes(homeStats.memory.total || 0)}`
+        });
+      }
+
+      // Home GPU
+      if (homeStats?.gpu && homeStats.gpu.length > 0) {
+        const gpu = homeStats.gpu[0];
+        gauges.push({
+          label: 'GPU',
+          value: gpu.usage || 0,
+          color: 'gpu',
+          details: `${gpu.temperature || 0}°C | ${gpu.memoryUsage || 0}% VRAM`
+        });
+      }
+
+      container.innerHTML = gauges.map(g => `
+        <div class="gauge-card">
+          ${createGaugeSVG(g.value, g.color)}
+          <div class="gauge-label">${g.label}</div>
+          <div class="gauge-value ${getStatusClass(g.value)}">${g.value}%</div>
+          <div class="gauge-details">${g.details}</div>
+        </div>
+      `).join('');
     }
+
+    // ==================== CPU Cores Rendering ====================
+    function renderCpuCores(perCore, model) {
+      const section = document.getElementById('cpu-cores-section');
+      const grid = document.getElementById('cpu-cores-grid');
+      const modelEl = document.getElementById('cpu-model');
+
+      if (!perCore || perCore.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+
+      section.style.display = 'block';
+      if (model) modelEl.textContent = model;
+
+      grid.innerHTML = perCore.map((core, i) => {
+        const usage = core.usage || 0;
+        const user = core.user || usage * 0.7;
+        const system = core.system || usage * 0.3;
+        const statusClass = getStatusClass(usage);
+
+        return `
+          <div class="cpu-core-bar">
+            <span class="cpu-core-label">C${i}</span>
+            <div class="cpu-core-progress">
+              <div class="cpu-core-fill cpu-user" style="width: ${user}%"></div>
+              <div class="cpu-core-fill cpu-system" style="width: ${system}%"></div>
+            </div>
+            <span class="cpu-core-value" style="color: var(--${statusClass === 'good' ? 'green' : statusClass === 'warning' ? 'yellow' : 'red'})">${usage}%</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ==================== Services Rendering ====================
+    const statusLabels = {
+      operational: 'Operational',
+      degraded: 'Degraded',
+      major_outage: 'Major Outage'
+    };
+
+    const categories = {
+      application: 'Applications',
+      microservice: 'Microservices',
+      infrastructure: 'Infrastructure',
+      homeserver: 'Home Server'
+    };
 
     function renderServices(services) {
-      const container = document.getElementById('services-container');
-      const grouped = {};
+      const tbody = document.getElementById('services-table-body');
 
-      // Group by category
-      services.forEach(service => {
-        const cat = service.category || 'other';
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(service);
-      });
+      if (!services || services.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No services found</td></tr>';
+        return;
+      }
 
-      let html = '';
-
-      // Render in order: application, microservice, infrastructure
-      ['application', 'microservice', 'infrastructure', 'homeserver'].forEach(category => {
-        if (!grouped[category]) return;
-
-        html += `
-          <div class="category">
-            <div class="category-header">${categories[category] || category}</div>
-            <div class="services-list">
-              ${grouped[category].map(service => `
-                <div class="service-item">
-                  <div class="service-info">
-                    <div class="service-name">
-                      ${service.publicUrl
-                        ? `<a href="${service.publicUrl}" target="_blank">${service.name}</a>
-                           <svg class="external-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                             <polyline points="15 3 21 3 21 9"></polyline>
-                             <line x1="10" y1="14" x2="21" y2="3"></line>
-                           </svg>`
-                        : service.name
-                      }
-                    </div>
-                    <div class="service-description">${service.description}</div>
-                    ${service.status !== 'operational' ? renderErrorDetails(service) : ''}
-                  </div>
-                  <div class="service-status">
-                    <div class="response-time">${formatResponseTime(service.responseTime)}</div>
-                    <div class="status-badge ${service.status}">
-                      <span class="dot"></span>
-                      ${statusLabels[service.status] || service.status}
-                    </div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
+      tbody.innerHTML = services.map(service => {
+        const rtClass = service.responseTime < 200 ? 'fast' : service.responseTime < 500 ? 'medium' : 'slow';
+        return `
+          <tr>
+            <td>
+              <div class="service-name-cell">
+                <span class="service-name">${service.publicUrl ? `<a href="${service.publicUrl}" target="_blank">${escapeHtml(service.name)}</a>` : escapeHtml(service.name)}</span>
+                <span class="service-desc">${escapeHtml(service.description || '')}</span>
+              </div>
+            </td>
+            <td>${categories[service.category] || service.category}</td>
+            <td><span class="status-badge ${service.status}"><span class="dot"></span>${statusLabels[service.status] || service.status}</span></td>
+            <td><span class="response-time ${rtClass}">${formatResponseTime(service.responseTime)}</span></td>
+          </tr>
         `;
-      });
-
-      container.innerHTML = html;
+      }).join('');
     }
 
-    function updateOverallStatus(status) {
-      const dot = document.getElementById('overall-dot');
-      const text = document.getElementById('overall-text');
-
-      dot.className = `status-dot ${status}`;
-      text.textContent = overallLabels[status] || status;
-    }
-
-    function showError(message) {
-      const container = document.getElementById('error-container');
-      container.innerHTML = `<div class="error-message">${message}</div>`;
-    }
-
-    function clearError() {
-      document.getElementById('error-container').innerHTML = '';
+    // ==================== Incidents Rendering ====================
+    function toggleIncident(el) {
+      el.closest('.incident-item').classList.toggle('expanded');
     }
 
     function formatDateTime(isoString) {
-      const date = new Date(isoString);
-      return date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return new Date(isoString).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
-    }
-
-    function formatDuration(startDate, endDate) {
-      const start = new Date(startDate);
-      const end = endDate ? new Date(endDate) : new Date();
-      const diff = end - start;
-
-      const minutes = Math.floor(diff / 60000);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
-
-      if (days > 0) return `${days}d ${hours % 24}h`;
-      if (hours > 0) return `${hours}h ${minutes % 60}m`;
-      return `${minutes}m`;
-    }
-
-    function toggleIncident(element) {
-      element.closest('.incident-item').classList.toggle('expanded');
     }
 
     function renderIncidents(incidents) {
@@ -1716,9 +1567,8 @@
       const countEl = document.getElementById('incident-count');
 
       const activeIncidents = incidents.filter(i => !i.resolvedAt);
-      const recentIncidents = incidents.slice(0, 10); // Show last 10
+      const recentIncidents = incidents.slice(0, 10);
 
-      // Update count badge
       if (activeIncidents.length > 0) {
         countEl.textContent = `${activeIncidents.length} Active`;
         countEl.classList.add('active');
@@ -1728,19 +1578,16 @@
       }
 
       if (recentIncidents.length === 0) {
-        container.innerHTML = '<div class="no-incidents">No incidents reported in the last 90 days.</div>';
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">No incidents reported.</div>';
         return;
       }
 
-      let html = '<div class="incident-list">';
-
-      recentIncidents.forEach(incident => {
+      container.innerHTML = recentIncidents.map(incident => {
         const isResolved = !!incident.resolvedAt;
         const statusClass = isResolved ? 'resolved' : 'active';
         const dotClass = isResolved ? 'resolved' : incident.status;
-        const duration = formatDuration(incident.startedAt, incident.resolvedAt);
 
-        html += `
+        return `
           <div class="incident-item ${statusClass}">
             <div class="incident-title-bar" onclick="toggleIncident(this)">
               <div class="incident-title">
@@ -1749,33 +1596,55 @@
               </div>
               <div style="display: flex; align-items: center; gap: 12px;">
                 <span class="incident-time">${formatDateTime(incident.startedAt)}</span>
-                <svg class="expand-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
+                <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
             </div>
             <div class="incident-details">
-              <div class="incident-meta">
-                <span>Service: ${escapeHtml(incident.serviceName)}</span>
-                <span>Duration: ${duration}</span>
-                <span>Status: ${isResolved ? 'Resolved' : (incident.status === 'major_outage' ? 'Major Outage' : 'Degraded')}</span>
-              </div>
-              <div class="incident-updates">
-                ${incident.updates.slice().reverse().map(update => `
-                  <div class="incident-update ${update.status}">
-                    <div class="incident-update-time">${formatDateTime(update.timestamp)}</div>
-                    <div class="incident-update-message">${escapeHtml(update.message)}</div>
-                  </div>
-                `).join('')}
-              </div>
+              <p style="color: var(--text-secondary); margin-bottom: 12px;">Service: ${escapeHtml(incident.serviceName)}</p>
+              ${incident.updates ? incident.updates.slice().reverse().map(u => `
+                <div style="padding: 8px 0; border-top: 1px solid var(--border-color);">
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">${formatDateTime(u.timestamp)}</div>
+                  <div style="color: var(--text-secondary);">${escapeHtml(u.message)}</div>
+                </div>
+              `).join('') : ''}
             </div>
           </div>
         `;
-      });
-
-      html += '</div>';
-      container.innerHTML = html;
+      }).join('');
     }
+
+    // ==================== Status Labels ====================
+    const overallLabels = {
+      operational: 'All Systems Operational',
+      degraded: 'Partial System Outage',
+      major_outage: 'Major System Outage'
+    };
+
+    function updateOverallStatus(status) {
+      const dot = document.getElementById('overall-dot');
+      const text = document.getElementById('overall-text');
+
+      dot.className = `status-dot ${status}`;
+      text.textContent = overallLabels[status] || status;
+
+      // Play sound on status change
+      if (previousStatus && previousStatus !== status) {
+        if (status === 'operational') {
+          playSound('success');
+          addLog('success', 'All systems operational');
+        } else if (status === 'degraded') {
+          playSound('warning');
+          addLog('warn', 'System degraded detected');
+        } else if (status === 'major_outage') {
+          playSound('error');
+          addLog('error', 'Major outage detected!');
+        }
+      }
+      previousStatus = status;
+    }
+
+    // ==================== Data Fetching ====================
+    let serverStats = { cloud: null, home: null };
 
     async function fetchStatus() {
       const btn = document.getElementById('refresh-btn');
@@ -1783,27 +1652,25 @@
       btn.classList.add('loading');
 
       try {
-        // Use relative path that works under /status prefix or root
         const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
         const response = await fetch(basePath + '/api/status');
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
 
-        clearError();
         updateOverallStatus(data.overallStatus);
         renderServices(data.services);
         renderIncidents(data.incidents || []);
 
-        document.getElementById('last-updated').textContent =
-          `Last updated: ${formatTime(data.timestamp)}`;
+        document.getElementById('last-updated').textContent = `Last updated: ${formatTime(data.timestamp)}`;
+
+        addLog('success', 'Status data refreshed');
+        playSound('refresh');
 
       } catch (error) {
         console.error('Failed to fetch status:', error);
-        showError(`Failed to fetch status: ${error.message}`);
+        addLog('error', `Failed to fetch status: ${error.message}`);
         updateOverallStatus('major_outage');
       } finally {
         btn.disabled = false;
@@ -1811,11 +1678,28 @@
       }
     }
 
-    // Auto-refresh management
-    let autoRefreshInterval = null;
+    async function fetchSystemStats() {
+      try {
+        const basePath = window.location.pathname.startsWith('/status') ? '/status' : '';
+        const response = await fetch(basePath + '/api/servers');
 
-    function getRefreshInterval() {
-      return parseInt(document.getElementById('refresh-interval').value);
+        if (response.ok) {
+          const stats = await response.json();
+          serverStats = stats;
+
+          renderGauges(stats.cloud, stats.home?.available ? stats.home : null);
+
+          // Render CPU cores from home server
+          if (stats.home?.available && stats.home.cpu?.perCore) {
+            renderCpuCores(stats.home.cpu.perCore, stats.home.cpu.model);
+          }
+
+          addLog('info', 'System stats updated');
+        }
+      } catch (error) {
+        console.error('Failed to fetch server stats:', error);
+        addLog('error', `Failed to fetch stats: ${error.message}`);
+      }
     }
 
     function fetchAll() {
@@ -1823,36 +1707,104 @@
       fetchSystemStats();
     }
 
+    // ==================== Auto Refresh ====================
+    let autoRefreshInterval = null;
+
+    function getRefreshInterval() {
+      return parseInt(document.getElementById('refresh-interval').value);
+    }
+
     function restartAutoRefresh() {
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-      }
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
       if (document.getElementById('auto-refresh').checked) {
         autoRefreshInterval = setInterval(fetchAll, getRefreshInterval());
       }
     }
 
-    // Auto-refresh toggle
     document.getElementById('auto-refresh').addEventListener('change', function() {
       if (this.checked) {
         autoRefreshInterval = setInterval(fetchAll, getRefreshInterval());
+        addLog('info', 'Auto-refresh enabled');
       } else {
         clearInterval(autoRefreshInterval);
         autoRefreshInterval = null;
+        addLog('info', 'Auto-refresh disabled');
       }
     });
 
-    // Refresh interval change
     document.getElementById('refresh-interval').addEventListener('change', function() {
       restartAutoRefresh();
+      addLog('info', `Refresh interval changed to ${this.options[this.selectedIndex].text}`);
     });
 
-    // Initial fetch
-    fetchStatus();
-    fetchSystemStats();
+    // ==================== Keyboard Shortcuts ====================
+    document.addEventListener('keydown', (e) => {
+      // Ctrl+K or Cmd+K to open command palette
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+      }
 
-    // Start auto-refresh
-    autoRefreshInterval = setInterval(fetchAll, getRefreshInterval());
+      // Escape to close command palette
+      if (e.key === 'Escape') {
+        closeCommandPalette();
+      }
+
+      // Quick shortcuts when palette is open
+      if (document.getElementById('command-palette').classList.contains('open')) {
+        if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          executeCommand('refresh');
+        } else if (e.key === 't' || e.key === 'T') {
+          e.preventDefault();
+          executeCommand('theme');
+        } else if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          executeCommand('sound');
+        } else if (e.key === 'a' || e.key === 'A') {
+          e.preventDefault();
+          executeCommand('audit');
+        }
+      }
+    });
+
+    // Command palette click handlers
+    document.querySelectorAll('.command-item').forEach(item => {
+      item.addEventListener('click', () => {
+        executeCommand(item.dataset.command);
+      });
+    });
+
+    document.getElementById('command-palette').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        closeCommandPalette();
+      }
+    });
+
+    // ==================== Initialize ====================
+    function init() {
+      // Load saved preferences
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.getElementById('theme-label').textContent = savedTheme === 'dark' ? 'Dark' : 'Light';
+      document.getElementById('theme-toggle').classList.toggle('active', savedTheme === 'light');
+
+      const savedSound = localStorage.getItem('soundEnabled');
+      soundEnabled = savedSound !== 'false';
+      document.getElementById('sound-label').textContent = soundEnabled ? 'Sound On' : 'Sound Off';
+      document.getElementById('sound-toggle').classList.toggle('active', soundEnabled);
+
+      addLog('info', 'System monitor initialized');
+      addLog('info', `Theme: ${savedTheme} | Sound: ${soundEnabled ? 'enabled' : 'disabled'}`);
+
+      // Initial fetch
+      fetchAll();
+
+      // Start auto-refresh
+      autoRefreshInterval = setInterval(fetchAll, getRefreshInterval());
+    }
+
+    init();
   </script>
 </body>
 </html>

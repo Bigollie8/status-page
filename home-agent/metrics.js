@@ -16,7 +16,13 @@ const HOST_DRIVES = process.env.HOST_DRIVES || '/host/drives';
 let prevCpuStats = null;
 let prevDiskStats = null;
 let prevKernelStats = null;
+let prevNetworkStats = null;
 let prevTimestamp = null;
+
+// Disk usage history for predictions
+let diskUsageHistory = [];
+const DISK_HISTORY_INTERVAL = 3600000; // 1 hour
+let lastDiskHistoryUpdate = 0;
 
 /**
  * Get per-core CPU utilization from /proc/stat
@@ -690,12 +696,350 @@ function getHostMemory() {
   return { total: 0, used: 0, free: 0, usage: 0 };
 }
 
+/**
+ * Get network bandwidth statistics from /proc/net/dev
+ */
+function getNetworkStats() {
+  try {
+    const netDev = fs.readFileSync(`${PROC_PATH}/net/dev`, 'utf8');
+    const lines = netDev.split('\n');
+    const interfaces = [];
+    const currentStats = {};
+    const now = Date.now();
+    const timeDelta = prevTimestamp ? (now - prevTimestamp) / 1000 : 1;
+
+    for (const line of lines) {
+      if (!line.includes(':')) continue;
+      const [ifacePart, statsPart] = line.split(':');
+      const iface = ifacePart.trim();
+
+      // Skip loopback and docker interfaces for main stats
+      if (iface === 'lo' || iface.startsWith('docker') || iface.startsWith('br-') || iface.startsWith('veth')) continue;
+
+      const parts = statsPart.trim().split(/\s+/);
+      const stats = {
+        rxBytes: parseInt(parts[0]) || 0,
+        rxPackets: parseInt(parts[1]) || 0,
+        rxErrors: parseInt(parts[2]) || 0,
+        rxDropped: parseInt(parts[3]) || 0,
+        txBytes: parseInt(parts[8]) || 0,
+        txPackets: parseInt(parts[9]) || 0,
+        txErrors: parseInt(parts[10]) || 0,
+        txDropped: parseInt(parts[11]) || 0
+      };
+
+      currentStats[iface] = stats;
+
+      // Calculate rates if we have previous data
+      if (prevNetworkStats && prevNetworkStats[iface]) {
+        const prev = prevNetworkStats[iface];
+        const rxBytesPerSec = (stats.rxBytes - prev.rxBytes) / timeDelta;
+        const txBytesPerSec = (stats.txBytes - prev.txBytes) / timeDelta;
+        const rxPacketsPerSec = (stats.rxPackets - prev.rxPackets) / timeDelta;
+        const txPacketsPerSec = (stats.txPackets - prev.txPackets) / timeDelta;
+
+        interfaces.push({
+          interface: iface,
+          rxBytesPerSec: Math.round(rxBytesPerSec),
+          txBytesPerSec: Math.round(txBytesPerSec),
+          rxPacketsPerSec: Math.round(rxPacketsPerSec),
+          txPacketsPerSec: Math.round(txPacketsPerSec),
+          rxBytes: stats.rxBytes,
+          txBytes: stats.txBytes,
+          rxErrors: stats.rxErrors + stats.rxDropped,
+          txErrors: stats.txErrors + stats.txDropped
+        });
+      }
+    }
+
+    prevNetworkStats = currentStats;
+    return interfaces;
+  } catch (error) {
+    console.error('Error getting network stats:', error.message);
+    return [];
+  }
+}
+
+/**
+ * Check health of configured services
+ */
+async function checkServiceHealth(services) {
+  const results = [];
+  const http = require('http');
+  const https = require('https');
+
+  for (const service of services) {
+    const startTime = Date.now();
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const protocol = service.url.startsWith('https') ? https : http;
+        const timeout = service.timeout || 5000;
+
+        const req = protocol.get(service.url, { timeout }, (res) => {
+          const responseTime = Date.now() - startTime;
+          resolve({
+            name: service.name,
+            url: service.url,
+            status: res.statusCode >= 200 && res.statusCode < 400 ? 'healthy' : 'degraded',
+            statusCode: res.statusCode,
+            responseTime,
+            lastCheck: new Date().toISOString()
+          });
+        });
+
+        req.on('error', (err) => {
+          resolve({
+            name: service.name,
+            url: service.url,
+            status: 'down',
+            error: err.message,
+            responseTime: Date.now() - startTime,
+            lastCheck: new Date().toISOString()
+          });
+        });
+
+        req.on('timeout', () => {
+          req.destroy();
+          resolve({
+            name: service.name,
+            url: service.url,
+            status: 'timeout',
+            responseTime: timeout,
+            lastCheck: new Date().toISOString()
+          });
+        });
+      });
+
+      results.push(result);
+    } catch (error) {
+      results.push({
+        name: service.name,
+        url: service.url,
+        status: 'error',
+        error: error.message,
+        lastCheck: new Date().toISOString()
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Get SMART disk health data
+ */
+function getSmartHealth() {
+  const disks = [];
+
+  // Try smartctl for Linux disks
+  try {
+    const output = execSync('lsblk -d -o NAME,TYPE -n 2>/dev/null | grep disk', { encoding: 'utf8', timeout: 5000 });
+    const diskNames = output.trim().split('\n').map(l => l.split(/\s+/)[0]).filter(d => d);
+
+    for (const disk of diskNames) {
+      try {
+        const smartOutput = execSync(`smartctl -H -A /dev/${disk} 2>/dev/null`, { encoding: 'utf8', timeout: 10000 });
+
+        const healthMatch = smartOutput.match(/SMART overall-health.*:\s*(\w+)/i);
+        const tempMatch = smartOutput.match(/(?:Temperature_Celsius|Airflow_Temperature).*?(\d+)\s*$/m);
+        const powerOnMatch = smartOutput.match(/Power_On_Hours.*?(\d+)/);
+        const reallocMatch = smartOutput.match(/Reallocated_Sector_Ct.*?(\d+)\s*$/m);
+        const pendingMatch = smartOutput.match(/Current_Pending_Sector.*?(\d+)\s*$/m);
+
+        disks.push({
+          device: disk,
+          health: healthMatch ? healthMatch[1] : 'Unknown',
+          temperature: tempMatch ? parseInt(tempMatch[1]) : null,
+          powerOnHours: powerOnMatch ? parseInt(powerOnMatch[1]) : null,
+          reallocatedSectors: reallocMatch ? parseInt(reallocMatch[1]) : 0,
+          pendingSectors: pendingMatch ? parseInt(pendingMatch[1]) : 0,
+          status: healthMatch && healthMatch[1] === 'PASSED' ? 'good' :
+                  (reallocMatch && parseInt(reallocMatch[1]) > 0) ? 'warning' : 'unknown'
+        });
+      } catch (e) {
+        // Individual disk SMART failed
+        continue;
+      }
+    }
+  } catch (e) {
+    // SMART tools not available
+  }
+
+  // Try Windows SMART via wmic (through docker or mounted volume)
+  if (disks.length === 0) {
+    try {
+      const smartDataPath = `${HOST_DRIVES}/c/docker-volumes/smart-data.json`;
+      if (fs.existsSync(smartDataPath)) {
+        const data = JSON.parse(fs.readFileSync(smartDataPath, 'utf8'));
+        return data.disks || [];
+      }
+    } catch (e) {
+      // Windows SMART not available
+    }
+  }
+
+  return disks;
+}
+
+/**
+ * Predict when disk will be full based on usage trends
+ */
+function getDiskPredictions(currentDisks) {
+  const now = Date.now();
+  const predictions = [];
+
+  // Update disk history periodically
+  if (now - lastDiskHistoryUpdate >= DISK_HISTORY_INTERVAL) {
+    for (const disk of currentDisks) {
+      const existing = diskUsageHistory.find(h => h.mount === disk.mount);
+      if (existing) {
+        existing.history.push({ timestamp: now, used: disk.used, total: disk.total });
+        // Keep only last 30 days of hourly data
+        if (existing.history.length > 720) existing.history.shift();
+      } else {
+        diskUsageHistory.push({
+          mount: disk.mount,
+          history: [{ timestamp: now, used: disk.used, total: disk.total }]
+        });
+      }
+    }
+    lastDiskHistoryUpdate = now;
+  }
+
+  // Calculate predictions
+  for (const disk of currentDisks) {
+    const history = diskUsageHistory.find(h => h.mount === disk.mount);
+    if (!history || history.history.length < 2) {
+      predictions.push({
+        mount: disk.mount,
+        daysUntilFull: null,
+        growthRatePerDay: 0,
+        trend: 'insufficient_data'
+      });
+      continue;
+    }
+
+    // Calculate growth rate over available history
+    const oldest = history.history[0];
+    const newest = history.history[history.history.length - 1];
+    const timeDiffDays = (newest.timestamp - oldest.timestamp) / (1000 * 60 * 60 * 24);
+
+    if (timeDiffDays < 0.5) {
+      predictions.push({
+        mount: disk.mount,
+        daysUntilFull: null,
+        growthRatePerDay: 0,
+        trend: 'insufficient_data'
+      });
+      continue;
+    }
+
+    const usedGrowth = newest.used - oldest.used;
+    const growthRatePerDay = usedGrowth / timeDiffDays;
+
+    if (growthRatePerDay <= 0) {
+      predictions.push({
+        mount: disk.mount,
+        daysUntilFull: null,
+        growthRatePerDay: Math.round(growthRatePerDay),
+        trend: growthRatePerDay < 0 ? 'decreasing' : 'stable'
+      });
+      continue;
+    }
+
+    const remainingSpace = disk.total - disk.used;
+    const daysUntilFull = Math.round(remainingSpace / growthRatePerDay);
+
+    predictions.push({
+      mount: disk.mount,
+      daysUntilFull: daysUntilFull > 0 ? daysUntilFull : 0,
+      growthRatePerDay: Math.round(growthRatePerDay),
+      trend: daysUntilFull < 30 ? 'critical' : daysUntilFull < 90 ? 'warning' : 'healthy'
+    });
+  }
+
+  return predictions;
+}
+
+/**
+ * Get Docker container stats with historical tracking
+ */
+function getContainerStats() {
+  try {
+    const output = execSync(
+      'docker stats --no-stream --format "{{.Name}},{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}},{{.NetIO}},{{.BlockIO}}" 2>/dev/null',
+      { encoding: 'utf8', timeout: 15000 }
+    );
+
+    return output.trim().split('\n').filter(line => line).map(line => {
+      const [name, cpu, memUsage, memPerc, netIO, blockIO] = line.split(',');
+
+      // Parse network I/O
+      let netRx = 0, netTx = 0;
+      if (netIO) {
+        const netParts = netIO.split('/').map(s => s.trim());
+        netRx = parseSize(netParts[0]);
+        netTx = parseSize(netParts[1]);
+      }
+
+      // Parse block I/O
+      let blockRead = 0, blockWrite = 0;
+      if (blockIO) {
+        const blockParts = blockIO.split('/').map(s => s.trim());
+        blockRead = parseSize(blockParts[0]);
+        blockWrite = parseSize(blockParts[1]);
+      }
+
+      return {
+        name,
+        cpu: parseFloat(cpu) || 0,
+        memUsage: memUsage || '0B / 0B',
+        memPercent: parseFloat(memPerc) || 0,
+        netRx,
+        netTx,
+        blockRead,
+        blockWrite,
+        timestamp: Date.now()
+      };
+    });
+  } catch (error) {
+    return [];
+  }
+}
+
+/**
+ * Parse size string like "1.5GB" to bytes
+ */
+function parseSize(sizeStr) {
+  if (!sizeStr) return 0;
+  const match = sizeStr.match(/^([\d.]+)\s*([KMGTP]?i?B)?$/i);
+  if (!match) return 0;
+
+  const value = parseFloat(match[1]);
+  const unit = (match[2] || 'B').toUpperCase();
+
+  const multipliers = {
+    'B': 1,
+    'KB': 1024,
+    'KIB': 1024,
+    'MB': 1024 * 1024,
+    'MIB': 1024 * 1024,
+    'GB': 1024 * 1024 * 1024,
+    'GIB': 1024 * 1024 * 1024,
+    'TB': 1024 * 1024 * 1024 * 1024,
+    'TIB': 1024 * 1024 * 1024 * 1024
+  };
+
+  return Math.round(value * (multipliers[unit] || 1));
+}
+
 // Initialize - collect baseline data
 function initialize() {
   // Run once to populate previous values for rate calculations
   getPerCoreCpu();
   getDiskIo();
   getKernelStats();
+  getNetworkStats();
 }
 
 module.exports = {
@@ -711,5 +1055,10 @@ module.exports = {
   getHostDiskUsage,
   getGpuInfo,
   getHostMemory,
+  getNetworkStats,
+  checkServiceHealth,
+  getSmartHealth,
+  getDiskPredictions,
+  getContainerStats,
   initialize
 };

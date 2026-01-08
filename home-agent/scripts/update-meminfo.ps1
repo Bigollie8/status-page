@@ -16,4 +16,5 @@ if (-not (Test-Path (Split-Path $outputPath))) {
     New-Item -ItemType Directory -Path (Split-Path $outputPath) -Force | Out-Null
 }
 
-$content | Out-File -FilePath $outputPath -Encoding UTF8 -NoNewline
+# Write UTF8 without BOM
+[System.IO.File]::WriteAllText($outputPath, $content, [System.Text.UTF8Encoding]::new($false))
